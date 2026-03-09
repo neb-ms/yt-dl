@@ -130,7 +130,9 @@ function collectInputPayload() {
   return {
     url: byId("url-input").value,
     formatId: byId("format-select").value,
-    quality: byId("quality-select").value
+    quality: byId("quality-select").value,
+    trimStart: byId("trim-start-input").value,
+    trimEnd: byId("trim-end-input").value
   };
 }
 
@@ -152,8 +154,16 @@ async function validateInput(showSuccessMessage = true) {
   }
 
   if (showSuccessMessage) {
+    const trim = validation.data.trim;
+    const trimMessage = trim ? ` Trim range: ${trim.startInput} -> ${trim.endInput}.` : "";
+
     if (validation.data.sourceKind === "playlist") {
-      setFeedback("Playlist URL is valid. Step 1 will download the first item only.", "warn");
+      setFeedback(
+        `Playlist URL is valid.${trimMessage} Current flow downloads the first item only.`,
+        "warn"
+      );
+    } else if (trim) {
+      setFeedback(`Input is valid.${trimMessage}`, "ok");
     } else {
       setFeedback("Input is valid. Ready to download.", "ok");
     }
@@ -215,7 +225,9 @@ async function startDownload() {
   activeDownloadId = startResult.downloadId;
   updateProgress(0);
   setDownloadControlsState(true);
-  setDownloadMetrics(`Download started. Output folder: ${startResult.outputDir}`);
+  const trim = validation.data.trim;
+  const trimSuffix = trim ? ` | Trim: ${trim.startInput} -> ${trim.endInput}` : "";
+  setDownloadMetrics(`Download started. Output folder: ${startResult.outputDir}${trimSuffix}`);
 
   if (startResult.note) {
     setFeedback(startResult.note, "warn");

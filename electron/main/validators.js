@@ -40,6 +40,137 @@ const FORMAT_OPTIONS = {
   }
 };
 
+function normalizeTextInput(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function parseTrimTimecode(rawValue) {
+  const value = normalizeTextInput(rawValue);
+  const invalidFormatMessage = "Use MM:SS or HH:MM:SS (for example 01:05 or 00:01:05).";
+
+  if (!value) {
+    return {
+      ok: false,
+      message: invalidFormatMessage
+    };
+  }
+
+  const segments = value.split(":");
+  const isNumeric = segments.every((segment) => /^\d+$/.test(segment));
+  if (!isNumeric) {
+    return {
+      ok: false,
+      message: invalidFormatMessage
+    };
+  }
+
+  if (segments.length === 2) {
+    const minutes = Number(segments[0]);
+    const seconds = Number(segments[1]);
+    if (seconds >= 60) {
+      return {
+        ok: false,
+        message: "Seconds must be between 00 and 59."
+      };
+    }
+
+    return {
+      ok: true,
+      seconds: minutes * 60 + seconds,
+      normalized: `${minutes}:${String(seconds).padStart(2, "0")}`
+    };
+  }
+
+  if (segments.length === 3) {
+    const hours = Number(segments[0]);
+    const minutes = Number(segments[1]);
+    const seconds = Number(segments[2]);
+    if (minutes >= 60 || seconds >= 60) {
+      return {
+        ok: false,
+        message: "Hours format requires minutes and seconds between 00 and 59."
+      };
+    }
+
+    return {
+      ok: true,
+      seconds: hours * 3600 + minutes * 60 + seconds,
+      normalized: `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+    };
+  }
+
+  return {
+    ok: false,
+    message: invalidFormatMessage
+  };
+}
+
+function validateTrimInput(payload) {
+  const trimStart = normalizeTextInput(payload.trimStart);
+  const trimEnd = normalizeTextInput(payload.trimEnd);
+
+  if (!trimStart && !trimEnd) {
+    return {
+      ok: true,
+      data: null
+    };
+  }
+
+  const errors = [];
+  const fieldErrors = {};
+
+  if (!trimStart || !trimEnd) {
+    const message = "Enter both start and end times to trim the download.";
+    errors.push(message);
+    fieldErrors.trimStart = message;
+    fieldErrors.trimEnd = message;
+    return {
+      ok: false,
+      errors,
+      fieldErrors
+    };
+  }
+
+  const startResult = parseTrimTimecode(trimStart);
+  if (!startResult.ok) {
+    errors.push(startResult.message);
+    fieldErrors.trimStart = startResult.message;
+  }
+
+  const endResult = parseTrimTimecode(trimEnd);
+  if (!endResult.ok) {
+    errors.push(endResult.message);
+    fieldErrors.trimEnd = endResult.message;
+  }
+
+  if (startResult.ok && endResult.ok && endResult.seconds <= startResult.seconds) {
+    const message = "Trim end must be greater than trim start.";
+    errors.push(message);
+    fieldErrors.trimEnd = message;
+  }
+
+  if (errors.length > 0) {
+    return {
+      ok: false,
+      errors,
+      fieldErrors
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      startInput: trimStart,
+      endInput: trimEnd,
+      startSeconds: startResult.seconds,
+      endSeconds: endResult.seconds,
+      durationSeconds: endResult.seconds - startResult.seconds,
+      normalizedStart: startResult.normalized,
+      normalizedEnd: endResult.normalized
+    }
+  };
+}
+
 function parseYouTubeUrl(rawUrl) {
   if (typeof rawUrl !== "string") {
     return {
@@ -156,6 +287,12 @@ function validateDownloadInput(payload) {
     fieldErrors.quality = message;
   }
 
+  const trimValidation = validateTrimInput(payload);
+  if (!trimValidation.ok) {
+    errors.push(...trimValidation.errors);
+    Object.assign(fieldErrors, trimValidation.fieldErrors);
+  }
+
   if (errors.length > 0) {
     return {
       ok: false,
@@ -171,14 +308,16 @@ function validateDownloadInput(payload) {
       sourceKind: urlResult.sourceKind,
       formatId,
       quality: requestedQuality,
-      formatType: formatConfig.type
+      formatType: formatConfig.type,
+      trim: trimValidation.data
     }
   };
 }
 
 module.exports = {
   FORMAT_OPTIONS,
+  parseTrimTimecode,
   parseYouTubeUrl,
+  validateTrimInput,
   validateDownloadInput
 };
-

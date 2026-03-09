@@ -80,7 +80,7 @@ button:disabled {
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-top: 12px;
 }
@@ -91,6 +91,23 @@ button:disabled {
   gap: 8px;
   font-size: 0.9rem;
   color: var(--muted);
+}
+
+.form-label-wide {
+  grid-column: 1 / -1;
+}
+
+.form-help {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.form-help code {
+  background: #0d1219;
+  border: 1px solid #202632;
+  border-radius: 4px;
+  padding: 0 5px;
 }
 
 input,

@@ -10,7 +10,7 @@
     <main class="app-shell">
       <header class="app-header">
         <h1>yt-dl</h1>
-        <p>Local-first YouTube downloader (Step 1: Input Engine + Basic Download).</p>
+        <p>Local-first YouTube downloader (Step 2: Trimmer).</p>
       </header>
 
       <section class="panel">
@@ -19,7 +19,7 @@
         </div>
 
         <div class="form-grid">
-          <label class="form-label" for="url-input">
+          <label class="form-label form-label-wide" for="url-input">
             YouTube URL
             <input
               id="url-input"
@@ -44,7 +44,31 @@
             Quality
             <select id="quality-select"></select>
           </label>
+
+          <label class="form-label" for="trim-start-input">
+            Trim Start
+            <input
+              id="trim-start-input"
+              type="text"
+              inputmode="numeric"
+              placeholder="01:05 or 00:01:05"
+              autocomplete="off"
+            />
+          </label>
+
+          <label class="form-label" for="trim-end-input">
+            Trim End
+            <input
+              id="trim-end-input"
+              type="text"
+              inputmode="numeric"
+              placeholder="01:35 or 00:01:35"
+              autocomplete="off"
+            />
+          </label>
         </div>
+
+        <p class="form-help">Leave trim blank for a full download. Supported formats: <code>MM:SS</code> and <code>HH:MM:SS</code>.</p>
 
         <div class="action-row">
           <button id="validate-btn" type="button">Validate Input</button>

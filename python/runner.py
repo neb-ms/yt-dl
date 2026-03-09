@@ -22,7 +22,38 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--quality", default="best")
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--download-id", required=False)
+    parser.add_argument("--trim-start-seconds", type=float, default=None)
+    parser.add_argument("--trim-end-seconds", type=float, default=None)
     return parser.parse_args()
+
+
+def format_seconds_label(seconds: float) -> str:
+    total_seconds = max(0, int(round(seconds)))
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    secs = total_seconds % 60
+    if hours > 0:
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+    return f"{minutes:02d}:{secs:02d}"
+
+
+def validate_trim_args(args: argparse.Namespace) -> Optional[Dict[str, float]]:
+    if args.trim_start_seconds is None and args.trim_end_seconds is None:
+        return None
+
+    if args.trim_start_seconds is None or args.trim_end_seconds is None:
+        raise ValueError("Both trim start and trim end must be provided together.")
+
+    if args.trim_start_seconds < 0 or args.trim_end_seconds < 0:
+        raise ValueError("Trim values must be zero or greater.")
+
+    if args.trim_end_seconds <= args.trim_start_seconds:
+        raise ValueError("Trim end must be greater than trim start.")
+
+    return {
+        "start": args.trim_start_seconds,
+        "end": args.trim_end_seconds,
+    }
 
 
 def build_video_selector(format_id: str, quality: str) -> str:
@@ -46,7 +77,39 @@ def build_audio_selector(format_id: str, quality: str) -> str:
     return f"bestaudio[abr<={quality}]/bestaudio"
 
 
-def build_ydl_options(args: argparse.Namespace, seen_files: set[str], output_file: Dict[str, Optional[str]]) -> Dict[str, Any]:
+def build_probe_options(args: argparse.Namespace) -> Dict[str, Any]:
+    opts: Dict[str, Any] = {
+        "quiet": True,
+        "no_warnings": True,
+    }
+
+    if args.source_kind == "playlist":
+        opts["noplaylist"] = False
+        opts["playlist_items"] = "1"
+    else:
+        opts["noplaylist"] = True
+
+    return opts
+
+
+def build_trim_download_ranges(trim_window: Dict[str, float]):
+    def _download_ranges(_info_dict: Dict[str, Any], _ydl: YoutubeDL):
+        return [
+            {
+                "start_time": trim_window["start"],
+                "end_time": trim_window["end"],
+            }
+        ]
+
+    return _download_ranges
+
+
+def build_ydl_options(
+    args: argparse.Namespace,
+    seen_files: set[str],
+    output_file: Dict[str, Optional[str]],
+    trim_window: Optional[Dict[str, float]],
+) -> Dict[str, Any]:
     def progress_hook(data: Dict[str, Any]) -> None:
         status = data.get("status")
         if status == "downloading":
@@ -131,6 +194,10 @@ def build_ydl_options(args: argparse.Namespace, seen_files: set[str], output_fil
     else:
         raise ValueError("Unsupported format id.")
 
+    if trim_window:
+        opts["download_ranges"] = build_trim_download_ranges(trim_window)
+        opts["force_keyframes_at_cuts"] = True
+
     opts["_seen_files"] = seen_files
     return opts
 
@@ -154,6 +221,71 @@ def find_newest_output(output_dir: str, seen_files: set[str], fallback_path: Opt
         return fallback_path
 
 
+def resolve_primary_info(info: Any) -> Optional[Dict[str, Any]]:
+    current = info
+    visited_ids = set()
+
+    while isinstance(current, dict):
+        current_id = id(current)
+        if current_id in visited_ids:
+            break
+        visited_ids.add(current_id)
+
+        entries = current.get("entries")
+        if not entries:
+            return current
+
+        next_entry = None
+        for entry in entries:
+            if entry:
+                next_entry = entry
+                break
+
+        if next_entry is None:
+            return current
+
+        current = next_entry
+
+    return current if isinstance(current, dict) else None
+
+
+def validate_trim_against_media(args: argparse.Namespace, trim_window: Optional[Dict[str, float]]) -> None:
+    if not trim_window:
+        return
+
+    emit(
+        "status",
+        message=(
+            f"Validating trim range "
+            f"{format_seconds_label(trim_window['start'])} -> {format_seconds_label(trim_window['end'])}..."
+        ),
+    )
+
+    with YoutubeDL(build_probe_options(args)) as ydl:
+        info = ydl.extract_info(args.url, download=False)
+
+    primary_info = resolve_primary_info(info)
+    if not primary_info:
+        return
+
+    duration = primary_info.get("duration")
+    if duration is None:
+        return
+
+    duration_seconds = float(duration)
+    if trim_window["start"] >= duration_seconds:
+        raise ValueError(
+            f"Trim start {format_seconds_label(trim_window['start'])} exceeds media duration "
+            f"{format_seconds_label(duration_seconds)}."
+        )
+
+    if trim_window["end"] > duration_seconds:
+        raise ValueError(
+            f"Trim end {format_seconds_label(trim_window['end'])} exceeds media duration "
+            f"{format_seconds_label(duration_seconds)}."
+        )
+
+
 def main() -> int:
     args = parse_args()
 
@@ -161,10 +293,36 @@ def main() -> int:
     seen_files = set(os.listdir(args.output_dir))
     output_file: Dict[str, Optional[str]] = {"path": None}
 
-    emit("status", message="Preparing download...")
+    try:
+        trim_window = validate_trim_args(args)
+    except ValueError as error:
+        emit("error", message=str(error))
+        return 1
 
     try:
-        ydl_opts = build_ydl_options(args, seen_files, output_file)
+        validate_trim_against_media(args, trim_window)
+    except DownloadError as error:
+        emit("error", message=f"Download failed: {error}")
+        return 1
+    except ValueError as error:
+        emit("error", message=str(error))
+        return 1
+    except Exception as error:  # noqa: BLE001
+        emit("error", message=f"Unexpected runner error: {error}")
+        return 1
+
+    emit("status", message="Preparing download...")
+    if trim_window:
+        emit(
+            "status",
+            message=(
+                f"Applying trim {format_seconds_label(trim_window['start'])} -> "
+                f"{format_seconds_label(trim_window['end'])}."
+            ),
+        )
+
+    try:
+        ydl_opts = build_ydl_options(args, seen_files, output_file, trim_window)
     except ValueError as error:
         emit("error", message=str(error))
         return 1

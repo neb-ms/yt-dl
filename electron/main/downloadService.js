@@ -27,6 +27,19 @@ function emitToWindow(webContents, eventPayload) {
   webContents.send("download:event", eventPayload);
 }
 
+function buildTrimRunnerArgs(trim) {
+  if (!trim) {
+    return [];
+  }
+
+  return [
+    "--trim-start-seconds",
+    String(trim.startSeconds),
+    "--trim-end-seconds",
+    String(trim.endSeconds)
+  ];
+}
+
 async function startDownload({
   appRoot,
   downloadsRoot,
@@ -67,7 +80,8 @@ async function startDownload({
     "--output-dir",
     outputDir,
     "--download-id",
-    downloadId
+    downloadId,
+    ...buildTrimRunnerArgs(input.trim)
   ];
 
   const child = spawn(python.command, [...python.args, ...runnerArgs], {
@@ -88,11 +102,25 @@ async function startDownload({
   emitToWindow(webContents, {
     event: "status",
     downloadId,
-    message:
-      input.sourceKind === "playlist"
-        ? "Playlist URL detected. Step 1 will download the first playlist item only."
-        : "Download started."
+    message: "Download started."
   });
+
+  if (input.sourceKind === "playlist") {
+    emitToWindow(webContents, {
+      event: "status",
+      downloadId,
+      level: "warning",
+      message: "Playlist URL detected. Current flow downloads the first playlist item only."
+    });
+  }
+
+  if (input.trim) {
+    emitToWindow(webContents, {
+      event: "status",
+      downloadId,
+      message: `Trim requested: ${input.trim.startInput} -> ${input.trim.endInput}.`
+    });
+  }
 
   let stdoutBuffer = "";
   let completionEmitted = false;
@@ -210,4 +238,3 @@ module.exports = {
   hasActiveDownload,
   startDownload
 };
-

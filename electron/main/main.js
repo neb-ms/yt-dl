@@ -74,7 +74,7 @@ function registerIpcHandlers() {
       outputDir: result.outputDir,
       note:
         validated.data.sourceKind === "playlist"
-          ? "Playlist URL accepted. Step 1 downloads the first item only."
+          ? "Playlist URL accepted. Current flow downloads the first item only."
           : null
     };
   });
