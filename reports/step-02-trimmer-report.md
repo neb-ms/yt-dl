@@ -116,10 +116,18 @@ npm.cmd run verify:step1
 - Suggested next action:
   - Expand playlist parsing into queue items in Step 3.
 
+- Resolution audit:
+  - Resolved in Step 3 by queue expansion and playlist batch handling.
+  - Reference: commit `d9f8092` (`feat: Implement queue service and playlist handling`).
+
 - Issue: `python/__pycache__/runner.cpython-314.pyc` is tracked and changes during compile verification.
 - Impact: Routine verification leaves a generated binary diff in the worktree.
 - Suggested next action:
   - Untrack or ignore generated Python bytecode in a future cleanup pass.
+
+- Resolution audit:
+  - Resolved after Step 3 by untracking compiled Python bytecode and ignoring future `.pyc`/`__pycache__` artifacts.
+  - Reference: commit `5e9da36` (`chore: Remove compiled Python bytecode files from __pycache__`).
 
 ## Handoff Notes for Future Agents
 - Assumptions made:

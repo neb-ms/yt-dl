@@ -134,6 +134,10 @@ npm.cmd run verify:step2
 - Suggested next action:
   - Stop tracking generated Python bytecode in a cleanup pass and ignore `python/__pycache__/`.
 
+- Resolution audit:
+  - Resolved after the initial Step 3 report by removing tracked bytecode and ignoring future generated cache files.
+  - Reference: commit `5e9da36` (`chore: Remove compiled Python bytecode files from __pycache__`).
+
 ## Handoff Notes for Future Agents
 - Assumptions made:
   - Sequential single-worker queueing is acceptable for Step 3.
