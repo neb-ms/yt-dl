@@ -23,17 +23,31 @@
           </div>
           <div class="brand-copy">
             <p class="section-eyebrow">Desktop downloader</p>
-            <h1>Save the good part, skip the clutter.</h1>
-            <p class="brand-summary">
-              Pull down a single video, a playlist, or an audio track without leaving your machine.
-            </p>
+            <h1>Save what you want, fast.</h1>
+            <p class="brand-summary">Video, audio, playlists, clips. All local.</p>
           </div>
         </div>
-        <div class="header-chip-group">
-          <div class="header-chip">Local only</div>
-          <div class="header-chip">Video + audio</div>
-          <div class="header-chip">Playlist ready</div>
-        </div>
+        <section class="header-status">
+          <div class="header-chip-group">
+            <div class="header-chip">Local only</div>
+            <div class="header-chip">Queue ready</div>
+          </div>
+          <div class="header-status-row">
+            <div class="header-status-copy">
+              <p class="section-eyebrow">Machine check</p>
+              <p id="status-message" class="status-summary">Checking your setup...</p>
+            </div>
+            <div class="button-cluster header-status-actions">
+              <button id="update-ytdlp-btn" type="button" class="button-accent">Update yt-dlp</button>
+              <button id="recheck-btn" type="button">Refresh</button>
+            </div>
+          </div>
+          <ul id="dependency-list" class="dependency-list dependency-strip"></ul>
+          <div class="header-status-foot">
+            <p class="runtime-note">Local checks. Updates only when asked.</p>
+            <p id="update-feedback" class="feedback feedback-inline">Manual updates keep you in control.</p>
+          </div>
+        </section>
       </header>
 
       <section class="top-stage">
@@ -47,7 +61,7 @@
               <span class="panel-pill">Paste a link to begin</span>
             </div>
             <p class="panel-intro">
-              Use a video link, a YouTube Music link, or a playlist. Audio can be trimmed before it lands on disk.
+              Paste a link. Trim only if you want a clip.
             </p>
 
             <div class="form-grid">
@@ -101,8 +115,7 @@
             </div>
 
             <p class="form-help">
-              Want a clip instead of the whole thing? Leave trim blank for the full file, or use
-              <code>MM:SS</code> / <code>HH:MM:SS</code>.
+              Leave trim blank for full length. Use <code>MM:SS</code> or <code>HH:MM:SS</code>.
             </p>
 
             <div class="action-row">
@@ -111,7 +124,7 @@
             </div>
 
             <p id="input-feedback" class="feedback">
-              Paste a link, choose your format, and add it to the queue when it looks right.
+              Paste a link, pick a format, then add it to the queue.
             </p>
 
             <div class="progress-panel active-panel">
@@ -120,7 +133,7 @@
                   <p class="section-eyebrow">Now downloading</p>
                   <h3 id="active-download-title">No active download</h3>
                   <p id="active-download-subtitle" class="panel-subtitle">
-                    Queue is quiet. Add a link whenever you are ready.
+                    Nothing is running yet.
                   </p>
                 </div>
               </div>
@@ -140,7 +153,7 @@
               <span class="panel-pill">Saved for next time</span>
             </div>
             <p class="panel-intro">
-              Keep video and audio separate if you want. New items will follow the folders you save here.
+              Pick saved folders for video and audio.
             </p>
 
             <div class="form-grid settings-grid">
@@ -162,7 +175,7 @@
             </div>
 
             <p class="form-help">
-              These saved folders are the only places the app will use for new downloads.
+              New downloads will use these folders.
             </p>
 
             <div class="action-row">
@@ -171,23 +184,6 @@
             </div>
 
             <p id="settings-feedback" class="feedback">Loading saved output folders...</p>
-          </section>
-
-          <section class="panel runtime-panel">
-            <div class="panel-title-row">
-              <div>
-                <p class="section-eyebrow">Machine check</p>
-                <h2>Ready to download?</h2>
-              </div>
-              <div class="button-cluster">
-                <button id="update-ytdlp-btn" type="button" class="button-accent">Update yt-dlp</button>
-                <button id="recheck-btn" type="button">Refresh</button>
-              </div>
-            </div>
-            <p class="runtime-note">Everything here stays on your machine. Updates only run when you ask for them.</p>
-            <p id="update-feedback" class="feedback">Manual updates keep you in control.</p>
-            <p id="status-message" class="status-summary">Checking your setup...</p>
-            <ul id="dependency-list" class="dependency-list"></ul>
           </section>
         </div>
       </section>
@@ -201,7 +197,7 @@
           <div id="queue-counts" class="queue-counts"></div>
         </div>
         <p class="panel-intro queue-intro">
-          Active items stay pinned at the top so you can pause, resume, or cancel without hunting around.
+          Active items stay on top.
         </p>
         <p id="queue-empty" class="queue-empty">Nothing is waiting right now.</p>
         <div id="queue-sections" class="queue-sections"></div>

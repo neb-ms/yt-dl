@@ -57,7 +57,7 @@ function renderDependency(check) {
   };
 
   let summary = "Ready to go.";
-  let detail = check.path ? `Detected at <code>${escapeHtml(shortPath(check.path, 72))}</code>.` : "Detected automatically.";
+  let detailText = check.path ? `Detected at ${shortPath(check.path, 72)}.` : "Detected automatically.";
 
   if (!check.available) {
     if (check.name === "python") {
@@ -68,7 +68,7 @@ function renderDependency(check) {
       summary = "Install ffmpeg so the app can finish and convert files.";
     }
 
-    detail = check.installHint ? escapeHtml(check.installHint) : "Install the missing tool, then refresh this panel.";
+    detailText = check.installHint ? check.installHint : "Install the missing tool, then refresh this panel.";
   } else if (check.name === "python") {
     summary = "Python is ready for downloads and updates.";
   } else if (check.name === "yt-dlp") {
@@ -79,14 +79,16 @@ function renderDependency(check) {
     summary = "Media conversion tools are ready.";
   }
 
+  const tooltip = escapeHtml(`${summary} ${detailText}`.trim());
+
   return `
-    <li class="dependency-item">
+    <li class="dependency-item" title="${tooltip}">
       <div class="dependency-header">
         <span class="dependency-name">${escapeHtml(titles[check.name] || check.name)}</span>
         <span class="${badgeClass}">${badgeLabel}</span>
       </div>
       <p class="dependency-summary">${escapeHtml(summary)}</p>
-      <p class="dependency-meta">${detail}</p>
+      <p class="dependency-meta">${escapeHtml(detailText)}</p>
     </li>
   `;
 }
@@ -96,15 +98,15 @@ function renderStatus(status) {
   const listEl = byId("dependency-list");
 
   if (!status || !Array.isArray(status.checks)) {
-    messageEl.textContent = "Dependency status unavailable.";
+    messageEl.textContent = "Status unavailable.";
     listEl.innerHTML = "";
     return;
   }
 
   const checkedAt = formatTimestamp(status.checkedAt);
   const summary = status.ok
-    ? "Your machine is ready for downloads."
-    : "A few tools still need attention before downloads can start.";
+    ? "Ready to download."
+    : "Setup needs attention.";
   messageEl.textContent = checkedAt ? `${summary} Checked ${checkedAt}.` : summary;
   listEl.innerHTML = status.checks.map(renderDependency).join("");
 }
@@ -436,7 +438,7 @@ function renderActiveDownload(snapshot) {
 
   if (!activeItem) {
     titleEl.textContent = "No active download";
-    subtitleEl.textContent = "Queue is quiet. Add a link whenever you are ready.";
+    subtitleEl.textContent = "Queue is quiet. Add a link to start.";
     updateProgress(0);
     setDownloadMetrics("No active download.");
     return;
@@ -452,7 +454,7 @@ function renderActiveDownload(snapshot) {
     qualityLabel(activeItem.formatId, activeItem.quality),
     activeItem.trim ? `Trim ${formatTrimLabel(activeItem.trim)}` : "Full download",
     `To ${folderLabel(activeItem.outputDir)}`
-  ].join(" • ");
+  ].join(" | ");
   updateProgress(percent);
   const note = prettifyStatusMessage(activeItem.latestMessage);
   const metrics = [
@@ -461,7 +463,7 @@ function renderActiveDownload(snapshot) {
     `${humanSpeed(activeItem.progress.speedBps)}`,
     `${humanEta(activeItem.progress.etaSeconds)} left`
   ];
-  setDownloadMetrics(note ? `${note} ${metrics.join(" • ")}` : metrics.join(" • "));
+  setDownloadMetrics(note ? `${note} ${metrics.join(" | ")}` : metrics.join(" | "));
 }
 
 function renderQueueItem(item) {
@@ -496,7 +498,7 @@ function renderQueueItem(item) {
       : prettifyStatusMessage(item.latestMessage);
   const metricsText =
     item.status === "active"
-      ? `${humanSpeed(item.progress.speedBps)} • ${humanBytes(item.progress.downloadedBytes)} of ${humanBytes(item.progress.totalBytes)} • ${humanEta(item.progress.etaSeconds)} left`
+      ? `${humanSpeed(item.progress.speedBps)} | ${humanBytes(item.progress.downloadedBytes)} of ${humanBytes(item.progress.totalBytes)} | ${humanEta(item.progress.etaSeconds)} left`
       : item.status === "paused"
         ? `${percent.toFixed(1)}% saved so far`
         : item.status === "completed"
@@ -655,7 +657,7 @@ async function browseForDirectory(kind) {
 
   byId(inputId).value = result.path;
   setSettingsFeedback(
-    `${kind === "audio" ? "Audio" : "Video"} folder selected. Save folders to apply new routing.`,
+    `${kind === "audio" ? "Audio" : "Video"} folder selected. Save to use it.`,
     "warn"
   );
 }
@@ -673,12 +675,12 @@ async function saveSettings() {
     }
 
     renderSettings(result.settings);
-    setSettingsFeedback("Output folders saved. New queue items will route to these approved paths.", "ok");
+    setSettingsFeedback("Folders saved. New queue items will use them.", "ok");
   } catch (error) {
     setSettingsFeedback(`Settings save failed: ${error.message}`, "error");
   } finally {
     saveButton.disabled = false;
-    saveButton.textContent = "Save Folders";
+    saveButton.textContent = "Save folders";
   }
 }
 
@@ -690,7 +692,7 @@ async function resetSettings() {
   }
 
   renderSettings(result.settings);
-  setSettingsFeedback("Output folders reset to their default approved locations.", "ok");
+  setSettingsFeedback("Folders reset to the default locations.", "ok");
 }
 
 async function addToQueue() {
@@ -799,7 +801,7 @@ async function recheckDependencies() {
     });
   } finally {
     button.disabled = false;
-    button.textContent = "Recheck";
+    button.textContent = "Refresh";
   }
 }
 
@@ -820,7 +822,7 @@ async function updateYtdlp() {
       return;
     }
 
-    setUpdateFeedback("yt-dlp update completed. Dependency status was refreshed.", "ok");
+    setUpdateFeedback("yt-dlp update finished. Your setup was refreshed.", "ok");
   } catch (error) {
     setUpdateFeedback(`yt-dlp update failed: ${error.message}`, "error");
   } finally {
@@ -906,5 +908,5 @@ window.addEventListener("DOMContentLoaded", () => {
   loadInitialSettings().catch((error) => {
     setSettingsFeedback(`Settings failed to load: ${error.message}`, "error");
   });
-  setUpdateFeedback("Updates stay manual and local to this machine.", "neutral");
+  setUpdateFeedback("Updates stay manual and local.", "neutral");
 });
