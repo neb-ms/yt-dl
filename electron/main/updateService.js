@@ -52,31 +52,29 @@ function createUpdateService({
 
     updateInProgress = true;
 
-    const python = await findPythonExecutableFn(appRoot);
-    if (!python) {
-      updateInProgress = false;
-      return {
-        ok: false,
-        message: "Python 3 was not found. Install Python before updating yt-dlp."
-      };
-    }
-
-    const commandSpec = buildUpdateCommand(python);
-    const commandPreview = buildCommandPreview(commandSpec);
-    const isConfirmed = confirmFn
-      ? await confirmFn({ python, commandSpec, commandPreview })
-      : await defaultConfirmUpdate({ dialogRef, browserWindow, commandPreview });
-
-    if (!isConfirmed) {
-      updateInProgress = false;
-      return {
-        ok: false,
-        cancelled: true,
-        message: "yt-dlp update cancelled."
-      };
-    }
-
     try {
+      const python = await findPythonExecutableFn(appRoot);
+      if (!python) {
+        return {
+          ok: false,
+          message: "Python 3 was not found. Install Python before updating yt-dlp."
+        };
+      }
+
+      const commandSpec = buildUpdateCommand(python);
+      const commandPreview = buildCommandPreview(commandSpec);
+      const isConfirmed = confirmFn
+        ? await confirmFn({ python, commandSpec, commandPreview })
+        : await defaultConfirmUpdate({ dialogRef, browserWindow, commandPreview });
+
+      if (!isConfirmed) {
+        return {
+          ok: false,
+          cancelled: true,
+          message: "yt-dlp update cancelled."
+        };
+      }
+
       const result = await runProcessFn(commandSpec.command, commandSpec.args, {
         cwd: appRoot,
         env: {

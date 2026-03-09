@@ -74,9 +74,9 @@ def build_video_selector(format_id: str, quality: str) -> str:
 
 
 def build_audio_selector(format_id: str, quality: str) -> str:
-    if quality == "best":
-        return "bestaudio"
-    return f"bestaudio[abr<={quality}]/bestaudio"
+    if format_id == "audio_m4a":
+        return "bestaudio[ext=m4a]/bestaudio/best"
+    return "bestaudio/best"
 
 
 def build_probe_options(args: argparse.Namespace) -> Dict[str, Any]:

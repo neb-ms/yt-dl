@@ -163,6 +163,38 @@ async function verifyUpdateFlow() {
   assert(captured.options.cwd === appRoot, "Expected update command to run from the repository root.");
   assert(captured.options.env.PYTHONUNBUFFERED === "1", "Expected update env to set PYTHONUNBUFFERED.");
 
+  let confirmationAttempts = 0;
+  const recoverableService = createUpdateService({
+    appRoot,
+    findPythonExecutableFn: async () => python,
+    confirmFn: async () => {
+      confirmationAttempts += 1;
+      if (confirmationAttempts === 1) {
+        throw new Error("Confirmation dialog failed.");
+      }
+      return true;
+    },
+    runProcessFn: async () => ({
+      exitCode: 0,
+      stdout: "ok",
+      stderr: ""
+    })
+  });
+
+  let confirmationError = null;
+  try {
+    await recoverableService.updateYtdlp();
+  } catch (error) {
+    confirmationError = error;
+  }
+
+  assert(
+    confirmationError && /confirmation dialog failed/i.test(confirmationError.message),
+    "Expected a confirmation failure to propagate its error."
+  );
+  const recoveredResult = await recoverableService.updateYtdlp();
+  assert(recoveredResult.ok, "Expected update service to recover after a confirmation failure.");
+
   let releaseUpdate = null;
   let runStartedResolve = null;
   const runStarted = new Promise((resolve) => {

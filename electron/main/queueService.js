@@ -232,37 +232,50 @@ function createQueueService({ appRoot, downloadsRoot, resolveOutputDirectory, on
     launchInProgress = true;
 
     try {
-      const python = await findPythonExecutable(appRoot);
-      if (!python) {
+      let python;
+      let runnerArgs;
+
+      try {
+        python = await findPythonExecutable(appRoot);
+        if (!python) {
+          nextItem.status = "failed";
+          nextItem.errorMessage =
+            "Python 3 was not found. Install Python and rerun scripts/setup-python.ps1 before downloading.";
+          nextItem.latestMessage = nextItem.errorMessage;
+          nextItem.completedAt = nowIso();
+          notifyQueueUpdated();
+          return;
+        }
+
+        fs.mkdirSync(nextItem.outputDir, { recursive: true });
+
+        const runnerPath = path.join(appRoot, "python", "runner.py");
+        runnerArgs = [
+          runnerPath,
+          "--url",
+          nextItem.url,
+          "--source-kind",
+          nextItem.sourceKind,
+          "--format-id",
+          nextItem.formatId,
+          "--quality",
+          nextItem.quality,
+          "--output-dir",
+          nextItem.outputDir,
+          "--download-id",
+          nextItem.id,
+          ...buildTrimRunnerArgs(nextItem.trim),
+          ...buildRunnerOptionsArgs(nextItem.runnerOptions)
+        ];
+      } catch (error) {
         nextItem.status = "failed";
-        nextItem.errorMessage =
-          "Python 3 was not found. Install Python and rerun scripts/setup-python.ps1 before downloading.";
+        nextItem.errorMessage = `Failed to prepare download: ${error.message}`;
         nextItem.latestMessage = nextItem.errorMessage;
         nextItem.completedAt = nowIso();
         notifyQueueUpdated();
+        pumpQueue().catch(() => {});
         return;
       }
-
-      fs.mkdirSync(nextItem.outputDir, { recursive: true });
-
-      const runnerPath = path.join(appRoot, "python", "runner.py");
-      const runnerArgs = [
-        runnerPath,
-        "--url",
-        nextItem.url,
-        "--source-kind",
-        nextItem.sourceKind,
-        "--format-id",
-        nextItem.formatId,
-        "--quality",
-        nextItem.quality,
-        "--output-dir",
-        nextItem.outputDir,
-        "--download-id",
-        nextItem.id,
-        ...buildTrimRunnerArgs(nextItem.trim),
-        ...buildRunnerOptionsArgs(nextItem.runnerOptions)
-      ];
 
       const child = spawn(python.command, [...python.args, ...runnerArgs], {
         cwd: appRoot,

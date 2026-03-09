@@ -237,17 +237,67 @@ async function verifyPauseResumeCancel() {
   }
 }
 
+async function verifyLaunchPreparationFailure() {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "yt-dl-step3-launch-"));
+  const blockedOutput = path.join(tempRoot, "blocked-output");
+  fs.writeFileSync(blockedOutput, "not a directory", "utf8");
+
+  const service = createQueueService({
+    appRoot,
+    resolveOutputDirectory: () => ({
+      ok: true,
+      kind: "audio",
+      path: blockedOutput
+    })
+  });
+
+  const tracker = createHistoryTracker(service);
+
+  try {
+    const input = validateDownloadInput({
+      url: sampleVideoUrl,
+      formatId: "audio_mp3",
+      quality: "128"
+    });
+    assert(input.ok, "Expected launch-failure test input to pass validation.");
+
+    const enqueueResult = await service.enqueueInput(input.data);
+    assert(enqueueResult.ok && enqueueResult.queueIds.length === 1, "Expected launch-failure test item to enqueue.");
+
+    const itemId = enqueueResult.queueIds[0];
+    await waitForCondition(() => {
+      const snapshot = tracker.getLatestSnapshot();
+      const item = snapshot.queue.find((entry) => entry.id === itemId);
+      return item && item.status === "failed" ? item : false;
+    }, { timeoutMs: 30000, label: "launch preparation failure state" });
+
+    const snapshot = tracker.getLatestSnapshot();
+    const item = snapshot.queue.find((entry) => entry.id === itemId);
+    assert(item, "Expected launch-failure queue item to exist.");
+    assert(/failed to prepare download/i.test(item.errorMessage || ""), "Expected launch failure to be surfaced to the queue item.");
+    assert(snapshot.counts.pending === 0, "Expected no pending items to remain after launch preparation failure.");
+    assert(snapshot.counts.active === 0, "Expected no active items to remain after launch preparation failure.");
+  } finally {
+    tracker.unsubscribe();
+    service.shutdown();
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+}
+
 async function main() {
   console.log("Running Step 3 verification...");
 
   await verifyPlaylistExpansion();
-  console.log("1/3 playlist expansion smoke test: PASS");
+  console.log("1/4 playlist expansion smoke test: PASS");
 
   await verifyQueueStateTransitions();
-  console.log("2/3 queue state transition test: PASS");
+  console.log("2/4 queue state transition test: PASS");
+
+  await verifyLaunchPreparationFailure();
+  console.log("3/4 launch preparation failure handling test: PASS");
 
   await verifyPauseResumeCancel();
-  console.log("3/3 pause/resume/cancel behavior test: PASS");
+  console.log("4/4 pause/resume/cancel behavior test: PASS");
 
   console.log("Step 3 verification passed.");
 }
