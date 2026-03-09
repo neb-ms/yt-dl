@@ -94,12 +94,18 @@ function renderDependency(check) {
 }
 
 function renderStatus(status) {
+  const headerStatusEl = byId("header-status");
   const messageEl = byId("status-message");
   const listEl = byId("dependency-list");
+  const updateButton = byId("update-ytdlp-btn");
+  const refreshButton = byId("recheck-btn");
 
   if (!status || !Array.isArray(status.checks)) {
     messageEl.textContent = "Status unavailable.";
     listEl.innerHTML = "";
+    headerStatusEl.hidden = false;
+    updateButton.hidden = true;
+    refreshButton.hidden = false;
     return;
   }
 
@@ -107,8 +113,20 @@ function renderStatus(status) {
   const summary = status.ok
     ? "Ready to download."
     : "Setup needs attention.";
+  const ytdlpCheck = status.checks.find((check) => check.name === "yt-dlp") || null;
+  const pythonCheck = status.checks.find((check) => check.name === "python") || null;
+  const ffmpegCheck = status.checks.find((check) => check.name === "ffmpeg") || null;
+  const canRepairYtdlp =
+    Boolean(ytdlpCheck) &&
+    Boolean(pythonCheck?.available) &&
+    (!ffmpegCheck || ffmpegCheck.available || !status.managedRuntime);
+
   messageEl.textContent = checkedAt ? `${summary} Checked ${checkedAt}.` : summary;
   listEl.innerHTML = status.checks.map(renderDependency).join("");
+  updateButton.hidden = !canRepairYtdlp;
+  updateButton.textContent = ytdlpCheck && ytdlpCheck.available ? "Update yt-dlp" : "Repair yt-dlp";
+  refreshButton.hidden = status.ok;
+  headerStatusEl.hidden = status.ok;
 }
 
 const QUALITY_OPTIONS = {
@@ -908,5 +926,5 @@ window.addEventListener("DOMContentLoaded", () => {
   loadInitialSettings().catch((error) => {
     setSettingsFeedback(`Settings failed to load: ${error.message}`, "error");
   });
-  setUpdateFeedback("Updates stay manual and local.", "neutral");
+  setUpdateFeedback("", "neutral");
 });

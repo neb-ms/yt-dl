@@ -1,3 +1,6 @@
+const fs = require("fs");
+const path = require("path");
+
 const { findPythonExecutable, runProcess } = require("./dependencyService");
 
 function buildUpdateCommand(python) {
@@ -9,6 +12,27 @@ function buildUpdateCommand(python) {
 
 function buildCommandPreview(commandSpec) {
   return [commandSpec.command, ...commandSpec.args].join(" ");
+}
+
+function readState(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function writeState(filePath, nextState) {
+  if (!filePath) {
+    return;
+  }
+
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, JSON.stringify(nextState, null, 2), "utf8");
 }
 
 async function defaultConfirmUpdate({ dialogRef, browserWindow, commandPreview }) {
@@ -36,13 +60,37 @@ function createUpdateService({
   appRoot,
   browserWindow = null,
   dialogRef = null,
+  resolvePythonInvokerFn = null,
+  buildCommandEnvFn = null,
   findPythonExecutableFn = findPythonExecutable,
   runProcessFn = runProcess,
-  confirmFn = null
+  confirmFn = null,
+  stateFilePath = null,
+  allowAutoUpdate = false,
+  autoUpdateIntervalMs = 24 * 60 * 60 * 1000
 }) {
   let updateInProgress = false;
 
-  async function updateYtdlp() {
+  async function resolvePythonInvoker() {
+    if (resolvePythonInvokerFn) {
+      return resolvePythonInvokerFn();
+    }
+
+    return findPythonExecutableFn(appRoot);
+  }
+
+  function buildCommandEnv(extraEnv = {}) {
+    if (buildCommandEnvFn) {
+      return buildCommandEnvFn(extraEnv);
+    }
+
+    return {
+      ...process.env,
+      ...extraEnv
+    };
+  }
+
+  async function runUpdate({ interactive = true, reason = "manual" } = {}) {
     if (updateInProgress) {
       return {
         ok: false,
@@ -53,7 +101,7 @@ function createUpdateService({
     updateInProgress = true;
 
     try {
-      const python = await findPythonExecutableFn(appRoot);
+      const python = await resolvePythonInvoker();
       if (!python) {
         return {
           ok: false,
@@ -63,9 +111,13 @@ function createUpdateService({
 
       const commandSpec = buildUpdateCommand(python);
       const commandPreview = buildCommandPreview(commandSpec);
-      const isConfirmed = confirmFn
-        ? await confirmFn({ python, commandSpec, commandPreview })
-        : await defaultConfirmUpdate({ dialogRef, browserWindow, commandPreview });
+      let isConfirmed = true;
+
+      if (interactive) {
+        isConfirmed = confirmFn
+          ? await confirmFn({ python, commandSpec, commandPreview })
+          : await defaultConfirmUpdate({ dialogRef, browserWindow, commandPreview });
+      }
 
       if (!isConfirmed) {
         return {
@@ -77,16 +129,16 @@ function createUpdateService({
 
       const result = await runProcessFn(commandSpec.command, commandSpec.args, {
         cwd: appRoot,
-        env: {
-          ...process.env,
+        env: buildCommandEnv({
           PYTHONUNBUFFERED: "1"
-        }
+        })
       });
 
       if (result.exitCode !== 0) {
         return {
           ok: false,
           message: "yt-dlp update failed.",
+          reason,
           commandPreview,
           stdout: result.stdout.trim(),
           stderr: result.stderr.trim(),
@@ -97,6 +149,7 @@ function createUpdateService({
       return {
         ok: true,
         message: "yt-dlp update completed successfully.",
+        reason,
         commandPreview,
         stdout: result.stdout.trim(),
         stderr: result.stderr.trim()
@@ -106,8 +159,59 @@ function createUpdateService({
     }
   }
 
+  async function updateYtdlp(options = {}) {
+    return runUpdate({
+      interactive: options.interactive !== false,
+      reason: options.reason || "manual"
+    });
+  }
+
+  async function maybeAutoUpdateYtdlp() {
+    if (!allowAutoUpdate || !stateFilePath) {
+      return {
+        ok: true,
+        skipped: true,
+        reason: "disabled"
+      };
+    }
+
+    const state = readState(stateFilePath);
+    const lastAttemptAt = Date.parse(state.lastAttemptAt || "");
+    if (Number.isFinite(lastAttemptAt) && Date.now() - lastAttemptAt < autoUpdateIntervalMs) {
+      return {
+        ok: true,
+        skipped: true,
+        reason: "recent"
+      };
+    }
+
+    const result = await runUpdate({
+      interactive: false,
+      reason: "startup-auto"
+    });
+
+    const nextState = {
+      ...state,
+      lastAttemptAt: new Date().toISOString(),
+      lastOutcome: result.ok ? "success" : "failed",
+      lastErrorMessage: result.ok ? null : result.message || result.stderr || null
+    };
+
+    if (result.ok) {
+      nextState.lastSuccessAt = nextState.lastAttemptAt;
+    }
+
+    writeState(stateFilePath, nextState);
+
+    return {
+      ...result,
+      updated: Boolean(result.ok)
+    };
+  }
+
   return {
     buildUpdateCommand,
+    maybeAutoUpdateYtdlp,
     updateYtdlp
   };
 }

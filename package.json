@@ -7,7 +7,8 @@
   "scripts": {
     "start": "electron .",
     "smoke:start": "node scripts/smoke-startup.js",
-    "dist:win": "electron-builder --win nsis portable",
+    "stage:runtime:win": "node scripts/stage-managed-runtime.js",
+    "dist:win": "npm.cmd run stage:runtime:win && electron-builder --win nsis portable",
     "dist:linux": "electron-builder --linux AppImage tar.gz",
     "dist:mac": "electron-builder --mac dmg zip",
     "verify:step0": "node scripts/verify-step0.js",
@@ -44,6 +45,13 @@
       {
         "from": "config",
         "to": "config",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "vendor/runtime-template",
+        "to": "runtime-template",
         "filter": [
           "**/*"
         ]

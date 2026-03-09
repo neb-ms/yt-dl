@@ -1,23 +1,23 @@
 :root {
-  --bg: #081019;
-  --bg-deep: #05090f;
-  --bg-soft: #101a26;
-  --panel: rgba(14, 22, 33, 0.92);
-  --panel-strong: rgba(18, 29, 43, 0.96);
-  --panel-muted: rgba(11, 18, 28, 0.88);
-  --ink: #edf4fb;
-  --muted: #91a1b3;
-  --muted-strong: #becbd7;
-  --line: rgba(179, 198, 216, 0.14);
-  --accent: #ff8a3d;
-  --accent-strong: #ff6f2a;
-  --accent-soft: rgba(255, 138, 61, 0.14);
-  --accent-2: #59c7c6;
-  --accent-2-soft: rgba(89, 199, 198, 0.12);
-  --ok: #66d2a0;
-  --warn: #f0bc68;
-  --danger: #ff8c86;
-  --shadow: rgba(0, 0, 0, 0.34);
+  --bg: #09120d;
+  --bg-deep: #050906;
+  --bg-soft: #101a14;
+  --panel: rgba(15, 25, 19, 0.94);
+  --panel-strong: rgba(19, 31, 24, 0.97);
+  --panel-muted: rgba(11, 19, 14, 0.92);
+  --ink: #eef4ea;
+  --muted: #97a995;
+  --muted-strong: #c6d2c4;
+  --line: rgba(179, 199, 181, 0.14);
+  --accent: #88a968;
+  --accent-strong: #5f7d4c;
+  --accent-soft: rgba(136, 169, 104, 0.16);
+  --accent-2: #3f6c53;
+  --accent-2-soft: rgba(63, 108, 83, 0.16);
+  --ok: #8fcc92;
+  --warn: #d2ba74;
+  --danger: #d98e7f;
+  --shadow: rgba(0, 0, 0, 0.36);
 }
 
 * {
@@ -33,9 +33,10 @@ body {
 
 body {
   background:
-    radial-gradient(circle at top left, rgba(255, 138, 61, 0.18) 0%, transparent 26%),
-    radial-gradient(circle at top right, rgba(89, 199, 198, 0.16) 0%, transparent 24%),
-    linear-gradient(180deg, #0b121b 0%, var(--bg) 36%, var(--bg-deep) 100%);
+    radial-gradient(circle at top left, rgba(136, 169, 104, 0.18) 0%, transparent 28%),
+    radial-gradient(circle at top right, rgba(63, 108, 83, 0.2) 0%, transparent 24%),
+    radial-gradient(circle at bottom center, rgba(84, 62, 40, 0.14) 0%, transparent 30%),
+    linear-gradient(180deg, #0d1610 0%, var(--bg) 38%, var(--bg-deep) 100%);
   color: var(--ink);
   font-family: "Segoe UI Variable Text", "Segoe UI", "Trebuchet MS", sans-serif;
 }
@@ -54,8 +55,8 @@ body::before {
 }
 
 ::selection {
-  background: rgba(255, 138, 61, 0.32);
-  color: #fffaf6;
+  background: rgba(136, 169, 104, 0.34);
+  color: #f7fbf2;
 }
 
 .app-shell {
@@ -65,7 +66,7 @@ body::before {
   margin: 0 auto;
   padding: 16px 18px 18px;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 14px;
   overflow: hidden;
 }
@@ -97,10 +98,10 @@ body::before {
   flex: 0 0 auto;
   padding: 9px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 138, 61, 0.22);
+  border: 1px solid rgba(136, 169, 104, 0.24);
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.12), transparent 62%),
-    linear-gradient(160deg, rgba(255, 138, 61, 0.15), rgba(89, 199, 198, 0.14));
+    linear-gradient(160deg, rgba(136, 169, 104, 0.18), rgba(63, 108, 83, 0.16));
   box-shadow:
     0 12px 24px rgba(0, 0, 0, 0.22),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -111,18 +112,18 @@ body::before {
   width: 10px;
   height: 10px;
   border-radius: 3px;
-  background: linear-gradient(180deg, var(--accent) 0%, #ffad73 100%);
+  background: linear-gradient(180deg, var(--accent) 0%, #a4c482 100%);
 }
 
 .brand-mark span:nth-child(2),
 .brand-mark span:nth-child(4),
 .brand-mark span:nth-child(6),
 .brand-mark span:nth-child(8) {
-  background: linear-gradient(180deg, rgba(89, 199, 198, 0.34) 0%, rgba(89, 199, 198, 0.12) 100%);
+  background: linear-gradient(180deg, rgba(63, 108, 83, 0.38) 0%, rgba(63, 108, 83, 0.14) 100%);
 }
 
 .brand-mark span:nth-child(5) {
-  background: linear-gradient(180deg, var(--accent-2) 0%, #7ddfd9 100%);
+  background: linear-gradient(180deg, var(--accent-2) 0%, #6d997e 100%);
 }
 
 .section-eyebrow {
@@ -163,13 +164,17 @@ body::before {
   border-radius: 20px;
   border: 1px solid var(--line);
   background:
-    linear-gradient(180deg, rgba(24, 36, 50, 0.9), rgba(11, 18, 28, 0.94)),
+    linear-gradient(180deg, rgba(24, 38, 29, 0.92), rgba(10, 18, 13, 0.96)),
     var(--panel-muted);
   box-shadow:
     0 14px 30px rgba(0, 0, 0, 0.24),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   display: grid;
   gap: 8px;
+}
+
+.header-status[hidden] {
+  display: none;
 }
 
 .header-status .header-chip-group {
@@ -181,7 +186,7 @@ body::before {
   padding: 7px 11px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--muted-strong);
   font-size: 0.72rem;
   font-weight: 700;
@@ -227,12 +232,13 @@ body::before {
   grid-template-columns: minmax(0, 1.52fr) minmax(320px, 0.82fr);
   gap: 14px;
   min-height: 0;
-  align-items: stretch;
+  align-items: start;
 }
 
 .top-primary,
 .top-secondary {
   min-height: 0;
+  align-self: start;
 }
 
 .top-secondary {
@@ -249,7 +255,7 @@ body::before {
   border: 1px solid var(--line);
   border-radius: 22px;
   background:
-    linear-gradient(180deg, rgba(24, 36, 50, 0.96), rgba(11, 18, 28, 0.98)),
+    linear-gradient(180deg, rgba(21, 34, 27, 0.97), rgba(10, 17, 12, 0.98)),
     var(--panel);
   box-shadow:
     0 18px 42px var(--shadow),
@@ -264,11 +270,11 @@ body::before {
   inset: 0 auto auto 0;
   width: 100%;
   height: 3px;
-  background: linear-gradient(90deg, var(--accent) 0%, #ffc284 42%, var(--accent-2) 100%);
+  background: linear-gradient(90deg, #769a5a 0%, #9dbc77 46%, #3f6c53 100%);
 }
 
 .composer-panel {
-  height: 100%;
+  height: auto;
 }
 
 .panel-title-row {
@@ -303,7 +309,7 @@ body::before {
   padding: 6px 11px;
   border-radius: 999px;
   background: var(--accent-soft);
-  color: #ffbc8f;
+  color: #dbe8c9;
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -357,7 +363,7 @@ select {
   min-height: 42px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  background: rgba(6, 11, 18, 0.92);
+  background: rgba(6, 12, 8, 0.92);
   color: var(--ink);
   padding: 10px 12px;
   font-size: 0.9rem;
@@ -368,14 +374,14 @@ select {
 }
 
 input::placeholder {
-  color: #708194;
+  color: #6f8270;
 }
 
 input:focus,
 select:focus {
   outline: none;
-  border-color: rgba(255, 138, 61, 0.58);
-  box-shadow: 0 0 0 3px rgba(255, 138, 61, 0.16);
+  border-color: rgba(136, 169, 104, 0.6);
+  box-shadow: 0 0 0 3px rgba(136, 169, 104, 0.18);
   transform: translateY(-1px);
 }
 
@@ -384,7 +390,7 @@ button {
   border: 1px solid transparent;
   border-radius: 999px;
   padding: 0 14px;
-  background: rgba(89, 199, 198, 0.12);
+  background: rgba(63, 108, 83, 0.18);
   color: var(--ink);
   font-size: 0.86rem;
   font-weight: 700;
@@ -399,8 +405,8 @@ button {
 
 button:hover {
   transform: translateY(-1px);
-  background: rgba(89, 199, 198, 0.18);
-  border-color: rgba(89, 199, 198, 0.22);
+  background: rgba(63, 108, 83, 0.28);
+  border-color: rgba(136, 169, 104, 0.18);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
 }
 
@@ -413,13 +419,13 @@ button:disabled {
 
 .button-accent {
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
-  color: #fff8f2;
-  box-shadow: 0 12px 26px rgba(255, 111, 42, 0.22);
+  color: #f4f8ef;
+  box-shadow: 0 12px 26px rgba(95, 125, 76, 0.3);
 }
 
 .button-accent:hover {
-  background: linear-gradient(135deg, #ff9957 0%, #ff6b2b 100%);
-  border-color: rgba(255, 194, 132, 0.18);
+  background: linear-gradient(135deg, #96b977 0%, #678754 100%);
+  border-color: rgba(182, 210, 146, 0.16);
 }
 
 .button-cluster,
@@ -450,21 +456,21 @@ button:disabled {
 }
 
 .form-help {
-  background: rgba(89, 199, 198, 0.08);
+  background: rgba(63, 108, 83, 0.16);
   color: var(--muted-strong);
 }
 
 .form-help code {
   padding: 1px 5px;
   border-radius: 999px;
-  background: rgba(89, 199, 198, 0.12);
-  color: #9fe7e5;
+  background: rgba(136, 169, 104, 0.16);
+  color: #d9ebc5;
   font-family: "Cascadia Code", "Consolas", monospace;
   font-size: 0.76rem;
 }
 
 .feedback {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--muted);
 }
 
@@ -492,9 +498,9 @@ button:disabled {
   padding: 14px;
   border-radius: 18px;
   background:
-    radial-gradient(circle at top right, rgba(255, 138, 61, 0.16), transparent 48%),
-    linear-gradient(160deg, rgba(24, 36, 50, 0.98), rgba(13, 21, 31, 0.98));
-  border: 1px solid rgba(255, 138, 61, 0.16);
+    radial-gradient(circle at top right, rgba(136, 169, 104, 0.16), transparent 48%),
+    linear-gradient(160deg, rgba(22, 36, 27, 0.98), rgba(12, 20, 14, 0.98));
+  border: 1px solid rgba(136, 169, 104, 0.18);
 }
 
 progress {
@@ -508,12 +514,12 @@ progress {
 }
 
 progress::-webkit-progress-bar {
-  background: rgba(89, 199, 198, 0.1);
+  background: rgba(63, 108, 83, 0.18);
   border-radius: 999px;
 }
 
 progress::-webkit-progress-value {
-  background: linear-gradient(90deg, var(--accent) 0%, #ffb978 45%, var(--accent-2) 100%);
+  background: linear-gradient(90deg, var(--accent) 0%, #9bbd78 45%, var(--accent-2) 100%);
   border-radius: 999px;
 }
 
@@ -568,7 +574,7 @@ progress::-webkit-progress-value {
 .dependency-item {
   padding: 12px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.035);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -577,7 +583,7 @@ progress::-webkit-progress-value {
   align-items: center;
   padding: 7px 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .dependency-header {
@@ -649,8 +655,8 @@ progress::-webkit-progress-value {
 .dependency-meta code {
   font-family: "Cascadia Code", "Consolas", monospace;
   font-size: 0.74rem;
-  color: #a8efeb;
-  background: rgba(89, 199, 198, 0.12);
+  color: #d9ebc5;
+  background: rgba(136, 169, 104, 0.14);
   padding: 2px 6px;
   border-radius: 999px;
 }
@@ -658,6 +664,16 @@ progress::-webkit-progress-value {
 .dependency-strip .dependency-summary,
 .dependency-strip .dependency-meta {
   display: none;
+}
+
+.top-secondary .form-help,
+.top-secondary .feedback {
+  margin-top: 8px;
+  font-size: 0.78rem;
+}
+
+.top-secondary .action-row {
+  margin-top: 8px;
 }
 
 .queue-panel {
@@ -675,7 +691,7 @@ progress::-webkit-progress-value {
   gap: 7px;
   padding: 7px 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--muted);
   font-size: 0.76rem;
   font-weight: 700;
@@ -701,7 +717,7 @@ progress::-webkit-progress-value {
 .queue-section {
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.03);
   overflow: hidden;
 }
 
@@ -711,7 +727,7 @@ progress::-webkit-progress-value {
   justify-content: space-between;
   gap: 10px;
   padding: 10px 12px;
-  background: rgba(89, 199, 198, 0.08);
+  background: rgba(63, 108, 83, 0.16);
 }
 
 .queue-section-header h3 {
@@ -775,13 +791,13 @@ progress::-webkit-progress-value {
   height: 8px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(89, 199, 198, 0.1);
+  background: rgba(63, 108, 83, 0.16);
 }
 
 .mini-progress-fill {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, var(--accent) 0%, #ffb978 45%, var(--accent-2) 100%);
+  background: linear-gradient(90deg, var(--accent) 0%, #9bbd78 45%, var(--accent-2) 100%);
 }
 
 .queue-item-metrics,
@@ -817,8 +833,8 @@ progress::-webkit-progress-value {
 }
 
 .queue-status-active {
-  background: rgba(89, 199, 198, 0.14);
-  color: #93e7e4;
+  background: rgba(63, 108, 83, 0.18);
+  color: #b6d9c1;
 }
 
 .queue-status-completed {
@@ -835,7 +851,7 @@ progress::-webkit-progress-value {
 .dependency-list,
 .queue-sections {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+  scrollbar-color: rgba(136, 169, 104, 0.22) transparent;
 }
 
 .dependency-list::-webkit-scrollbar,
@@ -845,7 +861,7 @@ progress::-webkit-progress-value {
 
 .dependency-list::-webkit-scrollbar-thumb,
 .queue-sections::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(136, 169, 104, 0.18);
   border-radius: 999px;
 }
 
@@ -861,6 +877,10 @@ progress::-webkit-progress-value {
   background: transparent;
   font-size: 0.76rem;
   line-height: 1.35;
+}
+
+.feedback-inline:empty {
+  display: none;
 }
 
 .feedback-inline.feedback-ok,

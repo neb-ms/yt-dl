@@ -48,12 +48,20 @@ function runProbe(command, args, options = {}) {
   });
 }
 
-async function probeDownloadInput({ appRoot, input }) {
-  const python = await findPythonExecutable(appRoot);
+async function probeDownloadInput({
+  appRoot,
+  input,
+  resolvePythonInvoker = null,
+  buildChildEnv = null,
+  missingPythonMessage = "Python 3 was not found. Install Python before probing playlist entries."
+}) {
+  const python = resolvePythonInvoker
+    ? await resolvePythonInvoker()
+    : await findPythonExecutable(appRoot);
   if (!python) {
     return {
       ok: false,
-      message: "Python 3 was not found. Install Python before probing playlist entries."
+      message: missingPythonMessage
     };
   }
 
@@ -70,7 +78,11 @@ async function probeDownloadInput({ appRoot, input }) {
     ],
     {
       cwd: appRoot,
-      env: {
+      env: buildChildEnv
+        ? buildChildEnv({
+            PYTHONUNBUFFERED: "1"
+          })
+        : {
         ...process.env,
         PYTHONUNBUFFERED: "1"
       }

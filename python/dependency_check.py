@@ -23,8 +23,18 @@ def _is_forced_missing(name, forced):
     return any(alias in forced for alias in aliases)
 
 
+def _managed_runtime_enabled():
+    return os.environ.get("YTDL_APP_MANAGED") == "1"
+
+
 def _install_hint(tool_name):
     os_name = platform.system().lower()
+    managed = _managed_runtime_enabled()
+
+    if managed:
+        if tool_name == "yt-dlp":
+            return "Restart the app to retry runtime repair, or reinstall the packaged app."
+        return "Repair or reinstall the packaged app to restore its managed runtime."
 
     if tool_name == "python":
         return "Install Python 3 and ensure it is available on PATH."
@@ -89,6 +99,7 @@ def _check_ytdlp(forced):
 
 def main():
     forced = _forced_missing_set()
+    managed = _managed_runtime_enabled()
 
     checks = [
         _check_python(),
@@ -101,9 +112,14 @@ def main():
 
     result = {
         "ok": ok,
+        "managedRuntime": managed,
         "checkedAt": datetime.now(timezone.utc).isoformat(),
         "message": (
-            "All required media dependencies are available."
+            "The app runtime is healthy."
+            if managed and ok
+            else "The app runtime needs repair."
+            if managed
+            else "All required media dependencies are available."
             if ok
             else "One or more required dependencies are missing. Install missing tools, then recheck."
         ),
@@ -115,4 +131,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

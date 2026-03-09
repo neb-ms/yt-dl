@@ -139,7 +139,15 @@ function buildCounts(items) {
   );
 }
 
-function createQueueService({ appRoot, downloadsRoot, resolveOutputDirectory, onQueueUpdated }) {
+function createQueueService({
+  appRoot,
+  downloadsRoot,
+  resolveOutputDirectory,
+  onQueueUpdated,
+  resolvePythonInvoker = null,
+  buildChildEnv = null,
+  missingPythonMessage = "Python 3 was not found. Install Python and rerun scripts/setup-python.ps1 before downloading."
+}) {
   const emitter = new EventEmitter();
   const queueItems = [];
   let activeTask = null;
@@ -236,11 +244,12 @@ function createQueueService({ appRoot, downloadsRoot, resolveOutputDirectory, on
       let runnerArgs;
 
       try {
-        python = await findPythonExecutable(appRoot);
+        python = resolvePythonInvoker
+          ? await resolvePythonInvoker()
+          : await findPythonExecutable(appRoot);
         if (!python) {
           nextItem.status = "failed";
-          nextItem.errorMessage =
-            "Python 3 was not found. Install Python and rerun scripts/setup-python.ps1 before downloading.";
+          nextItem.errorMessage = missingPythonMessage;
           nextItem.latestMessage = nextItem.errorMessage;
           nextItem.completedAt = nowIso();
           notifyQueueUpdated();
@@ -279,10 +288,14 @@ function createQueueService({ appRoot, downloadsRoot, resolveOutputDirectory, on
 
       const child = spawn(python.command, [...python.args, ...runnerArgs], {
         cwd: appRoot,
-        env: {
-          ...process.env,
-          PYTHONUNBUFFERED: "1"
-        },
+        env: buildChildEnv
+          ? buildChildEnv({
+              PYTHONUNBUFFERED: "1"
+            })
+          : {
+              ...process.env,
+              PYTHONUNBUFFERED: "1"
+            },
         windowsHide: true
       });
 
@@ -452,7 +465,13 @@ function createQueueService({ appRoot, downloadsRoot, resolveOutputDirectory, on
     }
 
     if (input.sourceKind === "playlist") {
-      const probeResult = await probeDownloadInput({ appRoot, input });
+      const probeResult = await probeDownloadInput({
+        appRoot,
+        input,
+        resolvePythonInvoker,
+        buildChildEnv,
+        missingPythonMessage
+      });
       if (!probeResult.ok) {
         return {
           ok: false,

@@ -89,7 +89,36 @@ async function findPythonExecutable(appRoot) {
   return null;
 }
 
-function buildMissingPythonResult() {
+function buildMissingPythonResult({ managedRuntime = false } = {}) {
+  if (managedRuntime) {
+    return {
+      ok: false,
+      managedRuntime: true,
+      checkedAt: new Date().toISOString(),
+      message: "The app runtime is unavailable. Reinstall or repair the app package.",
+      checks: [
+        {
+          name: "python",
+          available: false,
+          path: null,
+          installHint: "Reinstall or repair the app package so its managed runtime can be restored."
+        },
+        {
+          name: "yt-dlp",
+          available: false,
+          path: null,
+          installHint: "Restart the app to retry runtime repair, or reinstall the packaged app."
+        },
+        {
+          name: "ffmpeg",
+          available: false,
+          path: null,
+          installHint: "Reinstall or repair the packaged app so bundled media tools are restored."
+        }
+      ]
+    };
+  }
+
   return {
     ok: false,
     checkedAt: new Date().toISOString(),
@@ -121,14 +150,23 @@ function buildMissingPythonResult() {
   };
 }
 
-async function runDependencyCheck({ appRoot, extraEnv = {} }) {
-  const python = await findPythonExecutable(appRoot);
+async function runDependencyCheck({
+  appRoot,
+  extraEnv = {},
+  pythonInvoker = null,
+  managedRuntime = false
+}) {
+  const python = pythonInvoker || await findPythonExecutable(appRoot);
   if (!python) {
-    return buildMissingPythonResult();
+    return buildMissingPythonResult({ managedRuntime });
   }
 
   const scriptPath = path.join(appRoot, "python", "dependency_check.py");
-  const env = { ...process.env, ...extraEnv };
+  const env = {
+    ...process.env,
+    ...(python.env || {}),
+    ...extraEnv
+  };
   const checkRun = await runProcess(
     python.command,
     [...python.args, scriptPath],
@@ -153,6 +191,7 @@ async function runDependencyCheck({ appRoot, extraEnv = {} }) {
     const parsed = JSON.parse(checkRun.stdout);
     return {
       ...parsed,
+      managedRuntime,
       pythonInvoker: [python.command, ...python.args].join(" ")
     };
   } catch (error) {
@@ -170,6 +209,7 @@ async function runDependencyCheck({ appRoot, extraEnv = {} }) {
 }
 
 module.exports = {
+  buildMissingPythonResult,
   findPythonExecutable,
   runProcess,
   runDependencyCheck

@@ -9,12 +9,15 @@ const {
 const { createQueueService } = require("./queueService");
 const { createSettingsService } = require("./settingsService");
 const { createUpdateService } = require("./updateService");
+const { createRuntimeService } = require("./runtimeService");
+const { findPythonExecutable } = require("./dependencyService");
 
 let mainWindow = null;
 const appRoot = app.isPackaged ? process.resourcesPath : path.resolve(__dirname, "../..");
 let queueService = null;
 let settingsService = null;
 let updateService = null;
+let runtimeService = null;
 let latestDependencyStatus = {
   ok: false,
   checkedAt: null,
@@ -46,8 +49,41 @@ function createMainWindow() {
   });
 }
 
+async function resolvePythonInvoker() {
+  if (runtimeService) {
+    try {
+      const managedPython = await runtimeService.getManagedPythonInvoker();
+      if (managedPython) {
+        return managedPython;
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  return findPythonExecutable(appRoot);
+}
+
+function buildChildEnv(extraEnv = {}) {
+  return runtimeService?.buildChildEnv(extraEnv) || { ...process.env, ...extraEnv };
+}
+
+function getMissingRuntimeMessage() {
+  if (runtimeService?.shouldUseManagedRuntime()) {
+    return "The app runtime is unavailable. Reinstall or repair the packaged app.";
+  }
+
+  return "Python 3 was not found. Install Python and rerun scripts/setup-python.ps1 before downloading.";
+}
+
 async function checkDependencies() {
-  latestDependencyStatus = await runDependencyCheck({ appRoot });
+  const pythonInvoker = await resolvePythonInvoker();
+  latestDependencyStatus = await runDependencyCheck({
+    appRoot,
+    pythonInvoker,
+    extraEnv: buildChildEnv(),
+    managedRuntime: runtimeService?.shouldUseManagedRuntime()
+  });
 
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send("dependencies:status", latestDependencyStatus);
@@ -172,19 +208,40 @@ app.whenReady().then(async () => {
     userDataPath: app.getPath("userData"),
     downloadsRoot: app.getPath("downloads")
   });
+  runtimeService = createRuntimeService({
+    appRoot,
+    userDataPath: app.getPath("userData"),
+    isPackaged: app.isPackaged,
+    packageVersion: app.getVersion()
+  });
   queueService = createQueueService({
     appRoot,
     resolveOutputDirectory: (formatType) => settingsService.resolveOutputDirectory(formatType),
-    onQueueUpdated: broadcastQueueUpdate
+    onQueueUpdated: broadcastQueueUpdate,
+    resolvePythonInvoker,
+    buildChildEnv,
+    missingPythonMessage: getMissingRuntimeMessage()
   });
   registerIpcHandlers();
   createMainWindow();
   updateService = createUpdateService({
     appRoot,
     browserWindow: mainWindow,
-    dialogRef: dialog
+    dialogRef: dialog,
+    resolvePythonInvokerFn: resolvePythonInvoker,
+    buildCommandEnvFn: buildChildEnv,
+    stateFilePath: runtimeService.stateFilePath,
+    allowAutoUpdate: runtimeService.shouldUseManagedRuntime()
   });
+  await runtimeService.ensureReady().catch(() => {});
   await checkDependencies();
+  if (process.env.SMOKE_TEST !== "1") {
+    updateService.maybeAutoUpdateYtdlp().then(async (result) => {
+      if (result && result.updated) {
+        await checkDependencies();
+      }
+    }).catch(() => {});
+  }
   broadcastSettingsUpdate(settingsService.getSettings());
   broadcastQueueUpdate(queueService.getSnapshot());
 
@@ -198,7 +255,11 @@ app.whenReady().then(async () => {
       updateService = createUpdateService({
         appRoot,
         browserWindow: mainWindow,
-        dialogRef: dialog
+        dialogRef: dialog,
+        resolvePythonInvokerFn: resolvePythonInvoker,
+        buildCommandEnvFn: buildChildEnv,
+        stateFilePath: runtimeService.stateFilePath,
+        allowAutoUpdate: runtimeService.shouldUseManagedRuntime()
       });
       checkDependencies().catch(() => {});
     }

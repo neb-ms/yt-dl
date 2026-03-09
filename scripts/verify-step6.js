@@ -96,9 +96,14 @@ function verifyPackageConfiguration() {
   const files = Array.isArray(build.files) ? build.files : [];
 
   assert(scripts["dist:win"], "Expected package.json to define dist:win.");
+  assert(scripts["stage:runtime:win"], "Expected package.json to define stage:runtime:win.");
   assert(scripts["dist:linux"], "Expected package.json to define dist:linux.");
   assert(scripts["dist:mac"], "Expected package.json to define dist:mac.");
   assert(scripts["verify:step6"], "Expected package.json to define verify:step6.");
+  assert(
+    scripts["dist:win"].includes("stage:runtime:win"),
+    "Expected dist:win to stage the managed runtime before packaging."
+  );
 
   assert(files.includes("electron/**/*"), "Expected Electron sources to be included in package build files.");
   assert(files.includes("README.md"), "Expected README.md to be included in package build files.");
@@ -110,6 +115,10 @@ function verifyPackageConfiguration() {
   assert(
     extraResources.some((entry) => entry.from === "config" && entry.to === "config"),
     "Expected package build to copy config resources."
+  );
+  assert(
+    extraResources.some((entry) => entry.from === "vendor/runtime-template" && entry.to === "runtime-template"),
+    "Expected package build to copy the managed runtime template."
   );
 
   const winTargets = (build.win && build.win.target) || [];
@@ -129,7 +138,8 @@ function verifyReadmeCoverage() {
     "## Limitations",
     "npm.cmd run dist:win",
     "tests/smoke-matrix.json",
-    "The packaged app still expects a working local Python 3 installation plus `yt-dlp` and `ffmpeg` on PATH."
+    "Packaged Windows builds now stage and bundle a managed Python runtime, `yt-dlp`, and `ffmpeg`.",
+    "The packaged Windows app auto-checks its managed runtime on startup and updates `yt-dlp` inside the app-owned runtime."
   ];
 
   for (const marker of requiredMarkers) {
@@ -193,9 +203,15 @@ function findWindowsArtifacts() {
 function verifyWindowsResources(unpackedDir) {
   const runnerPath = path.join(unpackedDir, "resources", "python", "runner.py");
   const configPath = path.join(unpackedDir, "resources", "config", "default-settings.json");
+  const runtimeManifestPath = path.join(unpackedDir, "resources", "runtime-template", "win32-x64", "manifest.json");
+  const runtimePythonPath = path.join(unpackedDir, "resources", "runtime-template", "win32-x64", "python", "python.exe");
+  const runtimeFfmpegPath = path.join(unpackedDir, "resources", "runtime-template", "win32-x64", "ffmpeg", "bin", "ffmpeg.exe");
 
   assert(fs.existsSync(runnerPath), "Expected packaged Windows build to include resources/python/runner.py.");
   assert(fs.existsSync(configPath), "Expected packaged Windows build to include resources/config/default-settings.json.");
+  assert(fs.existsSync(runtimeManifestPath), "Expected packaged Windows build to include the managed runtime manifest.");
+  assert(fs.existsSync(runtimePythonPath), "Expected packaged Windows build to include the managed Python runtime.");
+  assert(fs.existsSync(runtimeFfmpegPath), "Expected packaged Windows build to include bundled ffmpeg.");
 }
 
 async function smokeRunExecutable(executablePath, label, tempRoot) {
@@ -215,7 +231,7 @@ async function smokeRunExecutable(executablePath, label, tempRoot) {
       TEMP: tempPath,
       TMP: tempPath
     },
-    timeoutMs: 45000,
+    timeoutMs: 120000,
     label
   });
 }
