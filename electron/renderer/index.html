@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>yt-dl</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <h1>yt-dl</h1>
+        <p>Local-first YouTube downloader (Step 1: Input Engine + Basic Download).</p>
+      </header>
+
+      <section class="panel">
+        <div class="panel-title-row">
+          <h2>Input Engine</h2>
+        </div>
+
+        <div class="form-grid">
+          <label class="form-label" for="url-input">
+            YouTube URL
+            <input
+              id="url-input"
+              type="url"
+              placeholder="https://www.youtube.com/watch?v=..."
+              autocomplete="off"
+            />
+          </label>
+
+          <label class="form-label" for="format-select">
+            Format
+            <select id="format-select">
+              <option value="video_mp4">Video + Audio (MP4)</option>
+              <option value="video_mkv">Video + Audio (MKV)</option>
+              <option value="audio_mp3">Audio Only (MP3)</option>
+              <option value="audio_wav">Audio Only (WAV)</option>
+              <option value="audio_m4a">Audio Only (M4A)</option>
+            </select>
+          </label>
+
+          <label class="form-label" for="quality-select">
+            Quality
+            <select id="quality-select"></select>
+          </label>
+        </div>
+
+        <div class="action-row">
+          <button id="validate-btn" type="button">Validate Input</button>
+          <button id="download-btn" type="button">Start Download</button>
+          <button id="cancel-btn" type="button" disabled>Cancel Active</button>
+        </div>
+
+        <p id="input-feedback" class="feedback">Fill the fields above and start a download.</p>
+
+        <div class="progress-panel">
+          <progress id="download-progress" max="100" value="0"></progress>
+          <p id="download-metrics" class="download-metrics">No active download.</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title-row">
+          <h2>Dependencies</h2>
+          <button id="recheck-btn" type="button">Recheck</button>
+        </div>
+        <p id="status-message">Loading dependency status...</p>
+        <ul id="dependency-list" class="dependency-list"></ul>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+  </html>

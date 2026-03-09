@@ -1,0 +1,16 @@
+{
+  "name": "yt-dl",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local desktop app for downloading and trimming YouTube media",
+  "main": "electron/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "smoke:start": "node scripts/smoke-startup.js",
+    "verify:step0": "node scripts/verify-step0.js",
+    "verify:step1": "node scripts/verify-step1.js"
+  },
+  "devDependencies": {
+    "electron": "^37.2.0"
+  }
+}
