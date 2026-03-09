@@ -9,7 +9,8 @@
     "smoke:start": "node scripts/smoke-startup.js",
     "verify:step0": "node scripts/verify-step0.js",
     "verify:step1": "node scripts/verify-step1.js",
-    "verify:step2": "node scripts/verify-step2.js"
+    "verify:step2": "node scripts/verify-step2.js",
+    "verify:step3": "node scripts/verify-step3.js"
   },
   "devDependencies": {
     "electron": "^37.2.0"

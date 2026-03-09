@@ -24,6 +24,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--download-id", required=False)
     parser.add_argument("--trim-start-seconds", type=float, default=None)
     parser.add_argument("--trim-end-seconds", type=float, default=None)
+    parser.add_argument("--rate-limit-bps", type=float, default=None)
     return parser.parse_args()
 
 
@@ -197,6 +198,9 @@ def build_ydl_options(
     if trim_window:
         opts["download_ranges"] = build_trim_download_ranges(trim_window)
         opts["force_keyframes_at_cuts"] = True
+
+    if args.rate_limit_bps is not None and args.rate_limit_bps > 0:
+        opts["ratelimit"] = int(args.rate_limit_bps)
 
     opts["_seen_files"] = seen_files
     return opts

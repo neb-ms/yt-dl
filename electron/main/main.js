@@ -2,10 +2,11 @@ const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const { runDependencyCheck } = require("./dependencyService");
 const { validateDownloadInput } = require("./validators");
-const { cancelActiveDownload, startDownload } = require("./downloadService");
+const { createQueueService } = require("./queueService");
 
 let mainWindow = null;
 const appRoot = path.resolve(__dirname, "../..");
+let queueService = null;
 let latestDependencyStatus = {
   ok: false,
   checkedAt: null,
@@ -47,22 +48,23 @@ async function checkDependencies() {
   return latestDependencyStatus;
 }
 
+function broadcastQueueUpdate(snapshot) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("queue:updated", snapshot);
+  }
+}
+
 function registerIpcHandlers() {
   ipcMain.handle("dependencies:get", async () => latestDependencyStatus);
   ipcMain.handle("dependencies:check", async () => checkDependencies());
   ipcMain.handle("download:validate", async (_event, payload) => validateDownloadInput(payload));
-  ipcMain.handle("download:start", async (event, payload) => {
+  ipcMain.handle("download:start", async (_event, payload) => {
     const validated = validateDownloadInput(payload);
     if (!validated.ok) {
       return validated;
     }
 
-    const result = await startDownload({
-      appRoot,
-      downloadsRoot: app.getPath("downloads"),
-      input: validated.data,
-      webContents: event.sender
-    });
+    const result = await queueService.enqueueInput(validated.data);
 
     if (!result.ok) {
       return result;
@@ -70,21 +72,31 @@ function registerIpcHandlers() {
 
     return {
       ok: true,
-      downloadId: result.downloadId,
-      outputDir: result.outputDir,
+      addedCount: result.addedCount,
+      queueIds: result.queueIds,
+      playlistTitle: result.playlistTitle,
       note:
         validated.data.sourceKind === "playlist"
-          ? "Playlist URL accepted. Current flow downloads the first item only."
+          ? `Playlist expanded into ${result.addedCount} queue item${result.addedCount === 1 ? "" : "s"}.`
           : null
     };
   });
-  ipcMain.handle("download:cancel", async () => cancelActiveDownload());
+  ipcMain.handle("queue:get", async () => queueService.getSnapshot());
+  ipcMain.handle("download:pause", async (_event, itemId) => queueService.pauseDownload(itemId));
+  ipcMain.handle("download:resume", async (_event, itemId) => queueService.resumeDownload(itemId));
+  ipcMain.handle("download:cancel", async (_event, itemId) => queueService.cancelDownload(itemId));
 }
 
 app.whenReady().then(async () => {
+  queueService = createQueueService({
+    appRoot,
+    downloadsRoot: app.getPath("downloads"),
+    onQueueUpdated: broadcastQueueUpdate
+  });
   registerIpcHandlers();
   createMainWindow();
   await checkDependencies();
+  broadcastQueueUpdate(queueService.getSnapshot());
 
   if (process.env.SMOKE_TEST === "1") {
     setTimeout(() => app.quit(), 1200);
@@ -102,4 +114,8 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
   }
+});
+
+app.on("before-quit", () => {
+  queueService?.shutdown();
 });

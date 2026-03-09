@@ -84,7 +84,36 @@ const QUALITY_OPTIONS = {
   ]
 };
 
-let activeDownloadId = null;
+const FORMAT_LABELS = {
+  video_mp4: "Video + Audio (MP4)",
+  video_mkv: "Video + Audio (MKV)",
+  audio_mp3: "Audio Only (MP3)",
+  audio_wav: "Audio Only (WAV)",
+  audio_m4a: "Audio Only (M4A)"
+};
+
+const STATUS_LABELS = {
+  pending: "Pending",
+  active: "Active",
+  paused: "Paused",
+  completed: "Completed",
+  failed: "Failed",
+  cancelled: "Cancelled"
+};
+
+let latestQueueSnapshot = {
+  queue: [],
+  activeItemId: null,
+  counts: {
+    total: 0,
+    pending: 0,
+    active: 0,
+    paused: 0,
+    completed: 0,
+    failed: 0,
+    cancelled: 0
+  }
+};
 
 function setFeedback(message, type = "neutral") {
   const feedbackEl = byId("input-feedback");
@@ -111,11 +140,6 @@ function updateProgress(percent) {
   progressEl.value = safePercent;
 }
 
-function setDownloadControlsState(isActive) {
-  byId("download-btn").disabled = isActive;
-  byId("cancel-btn").disabled = !isActive;
-}
-
 function populateQualityOptions() {
   const formatId = byId("format-select").value;
   const qualitySelect = byId("quality-select");
@@ -136,6 +160,10 @@ function collectInputPayload() {
   };
 }
 
+function formatTrimLabel(trim) {
+  return trim ? `${trim.startInput} -> ${trim.endInput}` : "Full download";
+}
+
 async function validateInput(showSuccessMessage = true) {
   if (!window.appApi) {
     setFeedback("Desktop bridge is unavailable in this renderer.", "error");
@@ -146,26 +174,19 @@ async function validateInput(showSuccessMessage = true) {
   const validation = await window.appApi.validateDownloadInput(payload);
 
   if (!validation.ok) {
-    const firstError = validation.errors && validation.errors.length > 0
-      ? validation.errors[0]
-      : "Input validation failed.";
+    const firstError =
+      validation.errors && validation.errors.length > 0 ? validation.errors[0] : "Input validation failed.";
     setFeedback(firstError, "error");
     return validation;
   }
 
   if (showSuccessMessage) {
-    const trim = validation.data.trim;
-    const trimMessage = trim ? ` Trim range: ${trim.startInput} -> ${trim.endInput}.` : "";
+    const trimMessage = validation.data.trim ? ` Trim: ${formatTrimLabel(validation.data.trim)}.` : "";
 
     if (validation.data.sourceKind === "playlist") {
-      setFeedback(
-        `Playlist URL is valid.${trimMessage} Current flow downloads the first item only.`,
-        "warn"
-      );
-    } else if (trim) {
-      setFeedback(`Input is valid.${trimMessage}`, "ok");
+      setFeedback(`Playlist URL is valid.${trimMessage} Adding it will expand the queue.`, "ok");
     } else {
-      setFeedback("Input is valid. Ready to download.", "ok");
+      setFeedback(`Input is valid.${trimMessage}`, "ok");
     }
   }
 
@@ -205,98 +226,257 @@ function humanEta(seconds) {
   return `${mins}m ${secs}s`;
 }
 
-async function startDownload() {
+function getActiveItem(snapshot) {
+  if (!snapshot || !Array.isArray(snapshot.queue)) {
+    return null;
+  }
+
+  if (snapshot.activeItemId) {
+    const activeById = snapshot.queue.find((item) => item.id === snapshot.activeItemId);
+    if (activeById) {
+      return activeById;
+    }
+  }
+
+  return snapshot.queue.find((item) => item.status === "active") || null;
+}
+
+function renderQueueCounts(snapshot) {
+  const counts = snapshot.counts || {};
+  const entries = [
+    { label: "Pending", value: counts.pending || 0 },
+    { label: "Active", value: counts.active || 0 },
+    { label: "Paused", value: counts.paused || 0 },
+    { label: "Completed", value: counts.completed || 0 },
+    { label: "Failed", value: counts.failed || 0 }
+  ];
+
+  byId("queue-counts").innerHTML = entries
+    .map(
+      (entry) =>
+        `<span class="count-chip"><span>${escapeHtml(entry.label)}</span><strong>${entry.value}</strong></span>`
+    )
+    .join("");
+}
+
+function renderActiveDownload(snapshot) {
+  const titleEl = byId("active-download-title");
+  const subtitleEl = byId("active-download-subtitle");
+  const activeItem = getActiveItem(snapshot);
+
+  if (!activeItem) {
+    titleEl.textContent = "No active download";
+    subtitleEl.textContent = "Queue is idle. Add a URL or playlist to begin.";
+    updateProgress(0);
+    setDownloadMetrics("No active download.");
+    return;
+  }
+
+  const percent =
+    typeof activeItem.progress.percent === "number" && Number.isFinite(activeItem.progress.percent)
+      ? activeItem.progress.percent
+      : 0;
+  titleEl.textContent = activeItem.title || activeItem.url;
+  subtitleEl.textContent =
+    `${FORMAT_LABELS[activeItem.formatId] || activeItem.formatId} | ` +
+    `Quality: ${activeItem.quality} | Trim: ${formatTrimLabel(activeItem.trim)}`;
+  updateProgress(percent);
+  setDownloadMetrics(
+    `Progress: ${percent.toFixed(1)}% | Speed: ${humanSpeed(activeItem.progress.speedBps)} | ` +
+      `Downloaded: ${humanBytes(activeItem.progress.downloadedBytes)} / ${humanBytes(activeItem.progress.totalBytes)} | ` +
+      `ETA: ${humanEta(activeItem.progress.etaSeconds)}`
+  );
+}
+
+function renderQueueItem(item) {
+  const subtitleBits = [
+    FORMAT_LABELS[item.formatId] || item.formatId,
+    `Quality: ${item.quality}`
+  ];
+
+  if (item.trim) {
+    subtitleBits.push(`Trim: ${formatTrimLabel(item.trim)}`);
+  }
+
+  if (item.playlistTitle && item.playlistIndex) {
+    subtitleBits.push(`Playlist: ${item.playlistTitle} #${item.playlistIndex}`);
+  }
+
+  if (item.attemptCount > 1) {
+    subtitleBits.push(`Attempts: ${item.attemptCount}`);
+  }
+
+  const statusLabel = STATUS_LABELS[item.status] || item.status;
+  const statusClass = `queue-status queue-status-${item.status}`;
+  const percent =
+    typeof item.progress.percent === "number" && Number.isFinite(item.progress.percent)
+      ? item.progress.percent
+      : item.status === "completed"
+        ? 100
+        : 0;
+  const metricsText =
+    item.status === "active"
+      ? `Progress ${percent.toFixed(1)}% | ${humanSpeed(item.progress.speedBps)} | ${humanBytes(item.progress.downloadedBytes)} / ${humanBytes(item.progress.totalBytes)}`
+      : item.status === "paused"
+        ? `Paused at ${percent.toFixed(1)}%`
+        : item.status === "completed"
+          ? item.outputPath || "Completed"
+          : item.errorMessage || item.latestMessage || "Queued";
+
+  let controls = "";
+  if (item.status === "active") {
+    controls = `
+      <div class="queue-item-actions">
+        <button type="button" data-action="pause" data-item-id="${escapeHtml(item.id)}">Pause</button>
+        <button type="button" data-action="cancel" data-item-id="${escapeHtml(item.id)}">Cancel</button>
+      </div>
+    `;
+  } else if (item.status === "paused") {
+    controls = `
+      <div class="queue-item-actions">
+        <button type="button" data-action="resume" data-item-id="${escapeHtml(item.id)}">Resume</button>
+        <button type="button" data-action="cancel" data-item-id="${escapeHtml(item.id)}">Cancel</button>
+      </div>
+    `;
+  } else if (item.status === "pending") {
+    controls = `
+      <div class="queue-item-actions">
+        <button type="button" data-action="cancel" data-item-id="${escapeHtml(item.id)}">Cancel</button>
+      </div>
+    `;
+  }
+
+  const outputLine =
+    item.outputPath && item.status === "completed"
+      ? `<div class="queue-item-path">Saved to: ${escapeHtml(item.outputPath)}</div>`
+      : "";
+  const errorLine =
+    item.errorMessage && (item.status === "failed" || item.status === "cancelled")
+      ? `<div class="queue-item-error">${escapeHtml(item.errorMessage)}</div>`
+      : "";
+
+  return `
+    <article class="queue-item">
+      <div class="queue-item-top">
+        <div>
+          <h4>${escapeHtml(item.title || item.url)}</h4>
+          <p class="queue-item-subtitle">${escapeHtml(subtitleBits.join(" | "))}</p>
+        </div>
+        <span class="${statusClass}">${escapeHtml(statusLabel)}</span>
+      </div>
+      <div class="queue-item-progress">
+        <div class="mini-progress">
+          <span class="mini-progress-fill" style="width:${Math.max(0, Math.min(100, percent))}%"></span>
+        </div>
+        <p class="queue-item-metrics">${escapeHtml(metricsText)}</p>
+      </div>
+      <p class="queue-item-message">${escapeHtml(item.latestMessage || "")}</p>
+      ${outputLine}
+      ${errorLine}
+      ${controls}
+    </article>
+  `;
+}
+
+function renderQueueSection(title, items) {
+  if (!items.length) {
+    return "";
+  }
+
+  return `
+    <section class="queue-section">
+      <div class="queue-section-header">
+        <h3>${escapeHtml(title)}</h3>
+        <span>${items.length}</span>
+      </div>
+      <div class="queue-section-items">
+        ${items.map(renderQueueItem).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderQueue(snapshot) {
+  const queueContainer = byId("queue-sections");
+  const emptyEl = byId("queue-empty");
+  const items = Array.isArray(snapshot.queue) ? snapshot.queue : [];
+
+  if (items.length === 0) {
+    queueContainer.innerHTML = "";
+    emptyEl.hidden = false;
+    return;
+  }
+
+  emptyEl.hidden = true;
+
+  const active = items.filter((item) => item.status === "active");
+  const pending = items.filter((item) => item.status === "pending");
+  const paused = items.filter((item) => item.status === "paused");
+  const completed = items.filter((item) => item.status === "completed");
+  const failed = items.filter((item) => item.status === "failed");
+  const cancelled = items.filter((item) => item.status === "cancelled");
+
+  queueContainer.innerHTML = [
+    renderQueueSection("Active", active),
+    renderQueueSection("Pending", pending),
+    renderQueueSection("Paused", paused),
+    renderQueueSection("Completed", completed),
+    renderQueueSection("Failed", failed),
+    renderQueueSection("Cancelled", cancelled)
+  ].join("");
+}
+
+function setQueueSnapshot(snapshot) {
+  latestQueueSnapshot = snapshot || latestQueueSnapshot;
+  renderQueueCounts(latestQueueSnapshot);
+  renderActiveDownload(latestQueueSnapshot);
+  renderQueue(latestQueueSnapshot);
+}
+
+async function addToQueue() {
   const validation = await validateInput(false);
   if (!validation || !validation.ok) {
     return;
   }
 
-  if (activeDownloadId) {
-    setFeedback("A download is already active.", "warn");
-    return;
-  }
-
-  const startResult = await window.appApi.startDownload(collectInputPayload());
-  if (!startResult.ok) {
-    setFeedback(startResult.message || "Download could not be started.", "error");
-    return;
-  }
-
-  activeDownloadId = startResult.downloadId;
-  updateProgress(0);
-  setDownloadControlsState(true);
-  const trim = validation.data.trim;
-  const trimSuffix = trim ? ` | Trim: ${trim.startInput} -> ${trim.endInput}` : "";
-  setDownloadMetrics(`Download started. Output folder: ${startResult.outputDir}${trimSuffix}`);
-
-  if (startResult.note) {
-    setFeedback(startResult.note, "warn");
-  } else {
-    setFeedback("Download started.", "ok");
-  }
-}
-
-async function cancelDownload() {
-  if (!activeDownloadId) {
-    return;
-  }
-
-  const result = await window.appApi.cancelDownload();
+  const result = await window.appApi.startDownload(collectInputPayload());
   if (!result.ok) {
-    setFeedback(result.message || "No active download to cancel.", "warn");
+    setFeedback(result.message || "Queue add failed.", "error");
     return;
   }
 
-  activeDownloadId = null;
-  setDownloadControlsState(false);
-  setFeedback("Download cancelled.", "warn");
-  setDownloadMetrics("Download cancelled by user.");
+  if (result.addedCount > 1) {
+    const playlistSuffix = result.playlistTitle ? ` from ${result.playlistTitle}` : "";
+    setFeedback(`Added ${result.addedCount} items to the queue${playlistSuffix}.`, "ok");
+  } else {
+    setFeedback("Added item to the queue.", "ok");
+  }
 }
 
-function handleDownloadEvent(payload) {
-  if (!payload) {
+async function handleQueueAction(action, itemId) {
+  let result;
+
+  if (action === "pause") {
+    result = await window.appApi.pauseDownload(itemId);
+  } else if (action === "resume") {
+    result = await window.appApi.resumeDownload(itemId);
+  } else if (action === "cancel") {
+    result = await window.appApi.cancelDownload(itemId);
+  } else {
     return;
   }
 
-  if (activeDownloadId && payload.downloadId && payload.downloadId !== activeDownloadId) {
+  if (!result.ok) {
+    setFeedback(result.message || "Queue action failed.", "warn");
     return;
   }
 
-  if (payload.event === "progress") {
-    const percent =
-      typeof payload.percent === "number" && Number.isFinite(payload.percent)
-        ? payload.percent
-        : 0;
-    updateProgress(percent);
-    setDownloadMetrics(
-      `Progress: ${percent.toFixed(1)}% | Speed: ${humanSpeed(payload.speedBps)} | ` +
-        `Downloaded: ${humanBytes(payload.downloadedBytes)} / ${humanBytes(payload.totalBytes)} | ` +
-        `ETA: ${humanEta(payload.etaSeconds)}`
-    );
-    return;
-  }
-
-  if (payload.event === "status") {
-    const level = payload.level === "error" ? "error" : payload.level === "warning" ? "warn" : "neutral";
-    setFeedback(payload.message || "Status updated.", level);
-    return;
-  }
-
-  if (payload.event === "complete") {
-    activeDownloadId = null;
-    setDownloadControlsState(false);
-    updateProgress(100);
-    setFeedback(payload.message || "Download complete.", "ok");
-    const pathText = payload.outputPath ? `Saved to: ${payload.outputPath}` : "Saved to output directory.";
-    setDownloadMetrics(pathText);
-    return;
-  }
-
-  if (payload.event === "error") {
-    activeDownloadId = null;
-    setDownloadControlsState(false);
-    setFeedback(payload.message || "Download failed.", "error");
-    setDownloadMetrics("Download failed. Review message above and retry.");
+  if (action === "pause") {
+    setFeedback("Queue item paused.", "warn");
+  } else if (action === "resume") {
+    setFeedback("Queue item resumed.", "ok");
+  } else if (action === "cancel") {
+    setFeedback("Queue item cancelled.", "warn");
   }
 }
 
@@ -308,6 +488,28 @@ async function loadInitialStatus() {
 
   const initialStatus = await window.appApi.getDependencyStatus();
   renderStatus(initialStatus);
+}
+
+async function loadInitialQueue() {
+  if (!window.appApi) {
+    setQueueSnapshot({
+      queue: [],
+      activeItemId: null,
+      counts: {
+        total: 0,
+        pending: 0,
+        active: 0,
+        paused: 0,
+        completed: 0,
+        failed: 0,
+        cancelled: 0
+      }
+    });
+    return;
+  }
+
+  const queueState = await window.appApi.getQueueState();
+  setQueueSnapshot(queueState);
 }
 
 async function recheckDependencies() {
@@ -332,6 +534,8 @@ async function recheckDependencies() {
 
 window.addEventListener("DOMContentLoaded", () => {
   populateQualityOptions();
+  renderQueueCounts(latestQueueSnapshot);
+
   byId("format-select").addEventListener("change", populateQualityOptions);
   byId("validate-btn").addEventListener("click", () => {
     validateInput(true).catch((error) => {
@@ -339,23 +543,29 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   });
   byId("download-btn").addEventListener("click", () => {
-    startDownload().catch((error) => {
-      setFeedback(`Download start failed: ${error.message}`, "error");
+    addToQueue().catch((error) => {
+      setFeedback(`Queue add failed: ${error.message}`, "error");
     });
   });
-  byId("cancel-btn").addEventListener("click", () => {
-    cancelDownload().catch((error) => {
-      setFeedback(`Cancel failed: ${error.message}`, "error");
-    });
-  });
+  byId("queue-sections").addEventListener("click", (event) => {
+    const target = event.target.closest("button[data-action]");
+    if (!target) {
+      return;
+    }
 
+    handleQueueAction(target.dataset.action, target.dataset.itemId).catch((error) => {
+      setFeedback(`Queue action failed: ${error.message}`, "error");
+    });
+  });
   byId("recheck-btn").addEventListener("click", recheckDependencies);
 
   if (window.appApi) {
     window.appApi.onDependencyStatus((status) => {
       renderStatus(status);
     });
-    window.appApi.onDownloadEvent(handleDownloadEvent);
+    window.appApi.onQueueUpdated((snapshot) => {
+      setQueueSnapshot(snapshot);
+    });
   }
 
   loadInitialStatus().catch((error) => {
@@ -364,5 +574,8 @@ window.addEventListener("DOMContentLoaded", () => {
       checks: [],
       checkedAt: new Date().toISOString()
     });
+  });
+  loadInitialQueue().catch((error) => {
+    setFeedback(`Queue state failed to load: ${error.message}`, "error");
   });
 });

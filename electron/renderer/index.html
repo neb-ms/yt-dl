@@ -10,7 +10,7 @@
     <main class="app-shell">
       <header class="app-header">
         <h1>yt-dl</h1>
-        <p>Local-first YouTube downloader (Step 2: Trimmer).</p>
+        <p>Local-first YouTube downloader (Step 3: Queue + Playlist Batch).</p>
       </header>
 
       <section class="panel">
@@ -72,16 +72,30 @@
 
         <div class="action-row">
           <button id="validate-btn" type="button">Validate Input</button>
-          <button id="download-btn" type="button">Start Download</button>
-          <button id="cancel-btn" type="button" disabled>Cancel Active</button>
+          <button id="download-btn" type="button">Add To Queue</button>
         </div>
 
-        <p id="input-feedback" class="feedback">Fill the fields above and start a download.</p>
+        <p id="input-feedback" class="feedback">Fill the fields above and add media to the queue.</p>
 
-        <div class="progress-panel">
+        <div class="progress-panel active-panel">
+          <div class="panel-title-row panel-title-row-compact">
+            <div>
+              <h3 id="active-download-title">No active download</h3>
+              <p id="active-download-subtitle" class="panel-subtitle">Queue is idle. Add a URL or playlist to begin.</p>
+            </div>
+          </div>
           <progress id="download-progress" max="100" value="0"></progress>
           <p id="download-metrics" class="download-metrics">No active download.</p>
         </div>
+      </section>
+
+      <section class="panel queue-panel">
+        <div class="panel-title-row">
+          <h2>Queue</h2>
+          <div id="queue-counts" class="queue-counts"></div>
+        </div>
+        <p id="queue-empty" class="queue-empty">Queue is empty.</p>
+        <div id="queue-sections" class="queue-sections"></div>
       </section>
 
       <section class="panel">

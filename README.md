@@ -21,6 +21,7 @@ PowerShell note:
 - Step 1 input engine for YouTube video, YouTube Music, and playlist URLs.
 - Format and quality presets for video and audio downloads.
 - Step 2 trim inputs with optional `MM:SS` / `HH:MM:SS` start and end timestamps.
+- Step 3 in-memory queue with playlist expansion plus pause/resume/cancel controls.
 
 ## Verification
 
@@ -32,3 +33,5 @@ PowerShell note:
   - `npm.cmd run verify:step1`
 - Step 2 verification bundle:
   - `npm.cmd run verify:step2`
+- Step 3 verification bundle:
+  - `npm.cmd run verify:step3`
