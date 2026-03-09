@@ -1,8 +1,8 @@
 {
-  "name": "yt-dl",
+  "name": "pinedrop",
   "version": "0.1.0",
   "private": true,
-  "description": "Local desktop app for downloading and trimming YouTube media",
+  "description": "Local-first desktop downloader focused on queueing, trimming, and ease of use",
   "main": "electron/main/main.js",
   "scripts": {
     "start": "electron .",
@@ -24,8 +24,8 @@
     "electron-builder": "^26.0.12"
   },
   "build": {
-    "appId": "local.ytdl.desktop",
-    "productName": "yt-dl",
+    "appId": "local.pinedrop.desktop",
+    "productName": "PineDrop",
     "directories": {
       "output": "dist"
     },
