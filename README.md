@@ -1,6 +1,8 @@
 # PineDrop
 
-PineDrop is a local-first desktop downloader built for people who want a clean workflow, not a pile of command flags. It wraps the download engine in a single-window app that makes link validation, trimming, queueing, metadata tagging, and output routing feel like one coherent tool.
+PineDrop is a local-first desktop downloader built for people who want a clean workflow, not a pile of command flags. It wraps proven open-source tools in a single-window app that makes link validation, trimming, queueing, metadata tagging, and output routing feel like one coherent tool.
+
+PineDrop is built with Electron and Python, and it depends on `yt-dlp` for media extraction and `ffmpeg` for trimming, conversion, and muxing. Those tools do the heavy lifting; PineDrop focuses on the local desktop UX around them.
 
 The value is the UX:
 - paste a link, choose the format, and queue it
@@ -70,6 +72,16 @@ This app exists to turn a powerful backend into something easier to live with:
 - trim and routing controls in one place
 - safer defaults around paths, validation, and local execution
 - packaged Windows builds that own their runtime instead of asking normal users to set one up
+
+## Credits
+
+PineDrop would not exist without the tools it builds on:
+- `yt-dlp` for the extraction engine and site support
+- `ffmpeg` for trimming, conversion, remuxing, and metadata work
+- Electron for the desktop shell and app packaging
+- Python for the backend runner and media workflow glue
+
+Respect is due to the maintainers and contributors behind those projects. PineDrop is the UX layer around their work, not a replacement for it.
 
 ## Current Features
 

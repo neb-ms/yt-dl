@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "description": "Local-first desktop downloader focused on queueing, trimming, and ease of use",
+  "author": "Miles Schulte",
+  "homepage": "https://github.com/neb-ms/yt-dl",
+  "bugs": {
+    "url": "https://github.com/neb-ms/yt-dl/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/neb-ms/yt-dl.git"
+  },
   "main": "electron/main/main.js",
   "scripts": {
     "start": "electron .",
@@ -59,6 +68,7 @@
     ],
     "win": {
       "signAndEditExecutable": false,
+      "icon": "assets/icon.ico",
       "target": [
         "nsis",
         "portable"

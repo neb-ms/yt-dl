@@ -88,6 +88,77 @@ function runCommand(command, args, options = {}) {
   });
 }
 
+function escapePowerShellString(value) {
+  return String(value).replace(/'/g, "''");
+}
+
+function runWindowsGuiExecutable(executablePath, options = {}) {
+  return new Promise((resolve, reject) => {
+    const env = options.env || process.env;
+    const timeoutMs = options.timeoutMs || 30000;
+    const label = options.label || "Command";
+    const workingDirectory = options.cwd || path.dirname(executablePath);
+    const envAssignments = Object.entries(env)
+      .map(
+        ([key, value]) =>
+          `$psi.EnvironmentVariables['${escapePowerShellString(key)}'] = '${escapePowerShellString(value)}';`
+      )
+      .join("\n");
+    const script = `
+$psi = New-Object System.Diagnostics.ProcessStartInfo
+$psi.FileName = '${escapePowerShellString(executablePath)}'
+$psi.WorkingDirectory = '${escapePowerShellString(workingDirectory)}'
+$psi.UseShellExecute = $false
+$psi.CreateNoWindow = $true
+${envAssignments}
+$proc = [System.Diagnostics.Process]::Start($psi)
+if (-not $proc.WaitForExit(${timeoutMs})) {
+  try { $proc.Kill() } catch {}
+  Write-Error '${escapePowerShellString(label)} timed out after ${timeoutMs}ms.'
+  exit 124
+}
+exit $proc.ExitCode
+`.trim();
+
+    const child = spawn(
+      "powershell.exe",
+      ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
+      {
+        cwd: workingDirectory,
+        windowsHide: true
+      }
+    );
+
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    child.on("error", (error) => {
+      reject(error);
+    });
+
+    child.on("exit", (code) => {
+      if (code === 0) {
+        resolve({ stdout, stderr });
+        return;
+      }
+
+      reject(
+        new Error(
+          `${label} failed with exit code ${code}.\nstdout: ${stdout}\nstderr: ${stderr}`
+        )
+      );
+    });
+  });
+}
+
 function verifyPackageConfiguration() {
   const pkg = readJson(packageJsonPath);
   const build = pkg.build || {};
@@ -221,7 +292,7 @@ async function smokeRunExecutable(executablePath, label, tempRoot) {
   fs.mkdirSync(profileRoot, { recursive: true });
   fs.mkdirSync(tempPath, { recursive: true });
 
-  await runCommand(executablePath, [], {
+  await runWindowsGuiExecutable(executablePath, {
     cwd: path.dirname(executablePath),
     env: {
       ...process.env,

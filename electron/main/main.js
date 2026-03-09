@@ -1,3 +1,4 @@
+const fs = require("fs");
 const { app, BrowserWindow, dialog, ipcMain } = require("electron");
 const path = require("path");
 const { runDependencyCheck } = require("./dependencyService");
@@ -25,6 +26,15 @@ let latestDependencyStatus = {
   checks: []
 };
 
+function getWindowIconPath() {
+  if (app.isPackaged) {
+    return undefined;
+  }
+
+  const devIconPath = path.resolve(appRoot, "assets", "icon.png");
+  return fs.existsSync(devIconPath) ? devIconPath : undefined;
+}
+
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -32,6 +42,7 @@ function createMainWindow() {
     minWidth: 1000,
     minHeight: 680,
     backgroundColor: "#0f1115",
+    icon: getWindowIconPath(),
     webPreferences: {
       preload: path.join(__dirname, "../preload/preload.js"),
       contextIsolation: true,
