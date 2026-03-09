@@ -11,20 +11,82 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function formatTimestamp(value) {
+  if (!value) {
+    return "";
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(parsed);
+}
+
+function shortPath(value, maxLength = 88) {
+  if (typeof value !== "string" || value.length <= maxLength) {
+    return value;
+  }
+
+  const trailingLength = 28;
+  return `${value.slice(0, maxLength - trailingLength - 3)}...${value.slice(-trailingLength)}`;
+}
+
+function folderLabel(value) {
+  if (typeof value !== "string" || !value.trim()) {
+    return "your saved folder";
+  }
+
+  const parts = value.split(/[/\\]+/).filter(Boolean);
+  return parts.length > 0 ? parts[parts.length - 1] : value;
+}
+
 function renderDependency(check) {
   const badgeClass = check.available ? "badge badge-ok" : "badge badge-missing";
-  const badgeLabel = check.available ? "Available" : "Missing";
-  const pathText = check.path ? `<code>${escapeHtml(check.path)}</code>` : "not found";
-  const hintText = check.installHint ? escapeHtml(check.installHint) : "n/a";
+  const badgeLabel = check.available ? "Ready" : "Needs setup";
+  const titles = {
+    python: "Python",
+    "yt-dlp": "yt-dlp",
+    ffmpeg: "ffmpeg"
+  };
+
+  let summary = "Ready to go.";
+  let detail = check.path ? `Detected at <code>${escapeHtml(shortPath(check.path, 72))}</code>.` : "Detected automatically.";
+
+  if (!check.available) {
+    if (check.name === "python") {
+      summary = "Install Python before starting downloads.";
+    } else if (check.name === "yt-dlp") {
+      summary = "Install or repair yt-dlp so links can be fetched.";
+    } else if (check.name === "ffmpeg") {
+      summary = "Install ffmpeg so the app can finish and convert files.";
+    }
+
+    detail = check.installHint ? escapeHtml(check.installHint) : "Install the missing tool, then refresh this panel.";
+  } else if (check.name === "python") {
+    summary = "Python is ready for downloads and updates.";
+  } else if (check.name === "yt-dlp") {
+    summary = check.path
+      ? "The download engine is installed and ready."
+      : "The download engine is available inside your Python environment.";
+  } else if (check.name === "ffmpeg") {
+    summary = "Media conversion tools are ready.";
+  }
 
   return `
     <li class="dependency-item">
       <div class="dependency-header">
-        <span class="dependency-name">${escapeHtml(check.name)}</span>
+        <span class="dependency-name">${escapeHtml(titles[check.name] || check.name)}</span>
         <span class="${badgeClass}">${badgeLabel}</span>
       </div>
-      <div class="dependency-meta">Path: ${pathText}</div>
-      <div class="dependency-meta">Install hint: ${hintText}</div>
+      <p class="dependency-summary">${escapeHtml(summary)}</p>
+      <p class="dependency-meta">${detail}</p>
     </li>
   `;
 }
@@ -39,8 +101,11 @@ function renderStatus(status) {
     return;
   }
 
-  const checkedAt = status.checkedAt ? `Last checked: ${status.checkedAt}` : "Not checked yet";
-  messageEl.textContent = `${status.message} ${checkedAt}`;
+  const checkedAt = formatTimestamp(status.checkedAt);
+  const summary = status.ok
+    ? "Your machine is ready for downloads."
+    : "A few tools still need attention before downloads can start.";
+  messageEl.textContent = checkedAt ? `${summary} Checked ${checkedAt}.` : summary;
   listEl.innerHTML = status.checks.map(renderDependency).join("");
 }
 
@@ -116,6 +181,98 @@ let latestQueueSnapshot = {
 };
 let latestSettings = null;
 
+const NOISY_QUEUE_MESSAGES = [
+  /no supported javascript runtime could be found/i,
+  /some android_vr client https formats have been skipped/i
+];
+
+function qualityLabel(formatId, quality) {
+  const options = QUALITY_OPTIONS[formatId] || [];
+  const matched = options.find((option) => option.value === quality);
+  return matched ? matched.label : quality;
+}
+
+function prettifyStatusMessage(message) {
+  const value = typeof message === "string" ? message.trim() : "";
+  if (!value) {
+    return "";
+  }
+
+  if (NOISY_QUEUE_MESSAGES.some((pattern) => pattern.test(value))) {
+    return "";
+  }
+
+  if (/^queued\.?$/i.test(value)) {
+    return "Waiting in line.";
+  }
+  if (/download started/i.test(value)) {
+    return "Download started.";
+  }
+  if (/resuming download/i.test(value)) {
+    return "Picking back up where you left off.";
+  }
+  if (/pausing/i.test(value)) {
+    return "Pausing...";
+  }
+  if (/paused\./i.test(value)) {
+    return "Paused. Resume whenever you're ready.";
+  }
+  if (/cancelling/i.test(value)) {
+    return "Cancelling...";
+  }
+  if (/cancelled by user/i.test(value)) {
+    return "Cancelled.";
+  }
+  if (/preparing download/i.test(value)) {
+    return "Getting everything ready...";
+  }
+  if (/validating trim range/i.test(value)) {
+    return "Checking your trim range...";
+  }
+  if (/applying trim/i.test(value)) {
+    return "Trimming to your selected range...";
+  }
+  if (/preparing metadata tags/i.test(value)) {
+    return "Adding title, artist, and artwork...";
+  }
+  if (/metadata was incomplete/i.test(value)) {
+    return "Some track details were missing. The download can still finish.";
+  }
+  if (/download finished\. finalizing output/i.test(value)) {
+    return "Wrapping up your file...";
+  }
+
+  return value;
+}
+
+function prettifyErrorMessage(message) {
+  const value = typeof message === "string" ? message.trim() : "";
+  if (!value) {
+    return "";
+  }
+
+  if (/requested format is not available/i.test(value)) {
+    return "That exact source version is not available right now. Try Max Available or pick another format.";
+  }
+  if (/ffprobe and ffmpeg not found/i.test(value)) {
+    return "ffmpeg is missing, so the file could not be finished.";
+  }
+  if (/python 3 was not found/i.test(value)) {
+    return "Python is not available yet. Install it, then try again.";
+  }
+  if (/outside the approved output folders/i.test(value)) {
+    return "Pick one of your saved folders before starting this download.";
+  }
+  if (/private video/i.test(value)) {
+    return "This video is private and cannot be downloaded.";
+  }
+  if (/age restricted/i.test(value)) {
+    return "This video is age restricted and could not be downloaded in the current setup.";
+  }
+
+  return value;
+}
+
 function setInlineFeedback(elementId, message, type = "neutral") {
   const feedbackEl = byId(elementId);
   feedbackEl.textContent = message;
@@ -175,15 +332,6 @@ function collectInputPayload() {
 
 function formatTrimLabel(trim) {
   return trim ? `${trim.startInput} -> ${trim.endInput}` : "Full download";
-}
-
-function shortPath(value, maxLength = 88) {
-  if (typeof value !== "string" || value.length <= maxLength) {
-    return value;
-  }
-
-  const trailingLength = 28;
-  return `${value.slice(0, maxLength - trailingLength - 3)}...${value.slice(-trailingLength)}`;
 }
 
 async function validateInput(showSuccessMessage = true) {
@@ -288,7 +436,7 @@ function renderActiveDownload(snapshot) {
 
   if (!activeItem) {
     titleEl.textContent = "No active download";
-    subtitleEl.textContent = "Queue is idle. Add a URL or playlist to begin.";
+    subtitleEl.textContent = "Queue is quiet. Add a link whenever you are ready.";
     updateProgress(0);
     setDownloadMetrics("No active download.");
     return;
@@ -299,34 +447,39 @@ function renderActiveDownload(snapshot) {
       ? activeItem.progress.percent
       : 0;
   titleEl.textContent = activeItem.title || activeItem.url;
-  subtitleEl.textContent =
-    `${FORMAT_LABELS[activeItem.formatId] || activeItem.formatId} | ` +
-    `Quality: ${activeItem.quality} | Trim: ${formatTrimLabel(activeItem.trim)} | ` +
-    `Folder: ${shortPath(activeItem.outputDir || "n/a")}`;
+  subtitleEl.textContent = [
+    FORMAT_LABELS[activeItem.formatId] || activeItem.formatId,
+    qualityLabel(activeItem.formatId, activeItem.quality),
+    activeItem.trim ? `Trim ${formatTrimLabel(activeItem.trim)}` : "Full download",
+    `To ${folderLabel(activeItem.outputDir)}`
+  ].join(" • ");
   updateProgress(percent);
-  setDownloadMetrics(
-    `Progress: ${percent.toFixed(1)}% | Speed: ${humanSpeed(activeItem.progress.speedBps)} | ` +
-      `Downloaded: ${humanBytes(activeItem.progress.downloadedBytes)} / ${humanBytes(activeItem.progress.totalBytes)} | ` +
-      `ETA: ${humanEta(activeItem.progress.etaSeconds)}`
-  );
+  const note = prettifyStatusMessage(activeItem.latestMessage);
+  const metrics = [
+    `${percent.toFixed(1)}% complete`,
+    `${humanBytes(activeItem.progress.downloadedBytes)} of ${humanBytes(activeItem.progress.totalBytes)}`,
+    `${humanSpeed(activeItem.progress.speedBps)}`,
+    `${humanEta(activeItem.progress.etaSeconds)} left`
+  ];
+  setDownloadMetrics(note ? `${note} ${metrics.join(" • ")}` : metrics.join(" • "));
 }
 
 function renderQueueItem(item) {
   const subtitleBits = [
     FORMAT_LABELS[item.formatId] || item.formatId,
-    `Quality: ${item.quality}`
+    qualityLabel(item.formatId, item.quality)
   ];
 
   if (item.trim) {
-    subtitleBits.push(`Trim: ${formatTrimLabel(item.trim)}`);
+    subtitleBits.push(`Trim ${formatTrimLabel(item.trim)}`);
   }
 
   if (item.playlistTitle && item.playlistIndex) {
-    subtitleBits.push(`Playlist: ${item.playlistTitle} #${item.playlistIndex}`);
+    subtitleBits.push(`${item.playlistTitle} #${item.playlistIndex}`);
   }
 
   if (item.attemptCount > 1) {
-    subtitleBits.push(`Attempts: ${item.attemptCount}`);
+    subtitleBits.push(`Attempt ${item.attemptCount}`);
   }
 
   const statusLabel = STATUS_LABELS[item.status] || item.status;
@@ -337,14 +490,22 @@ function renderQueueItem(item) {
       : item.status === "completed"
         ? 100
         : 0;
+  const friendlyMessage =
+    item.status === "failed" || item.status === "cancelled"
+      ? prettifyErrorMessage(item.errorMessage || item.latestMessage)
+      : prettifyStatusMessage(item.latestMessage);
   const metricsText =
     item.status === "active"
-      ? `Progress ${percent.toFixed(1)}% | ${humanSpeed(item.progress.speedBps)} | ${humanBytes(item.progress.downloadedBytes)} / ${humanBytes(item.progress.totalBytes)}`
+      ? `${humanSpeed(item.progress.speedBps)} • ${humanBytes(item.progress.downloadedBytes)} of ${humanBytes(item.progress.totalBytes)} • ${humanEta(item.progress.etaSeconds)} left`
       : item.status === "paused"
-        ? `Paused at ${percent.toFixed(1)}%`
+        ? `${percent.toFixed(1)}% saved so far`
         : item.status === "completed"
-          ? item.outputPath || "Completed"
-          : item.errorMessage || item.latestMessage || "Queued";
+          ? "Finished and saved."
+          : item.status === "failed"
+            ? "Needs attention."
+            : item.status === "cancelled"
+              ? "Stopped before completion."
+              : "Waiting for its turn.";
 
   let controls = "";
   if (item.status === "active") {
@@ -371,15 +532,18 @@ function renderQueueItem(item) {
 
   const outputLine =
     item.outputPath && item.status === "completed"
-      ? `<div class="queue-item-path">Saved to: ${escapeHtml(item.outputPath)}</div>`
+      ? `<div class="queue-item-path" title="${escapeHtml(item.outputPath)}">Saved to ${escapeHtml(shortPath(item.outputPath, 110))}</div>`
       : "";
-  const routeLine = item.outputDir
-    ? `<div class="queue-item-route">Route: ${escapeHtml(shortPath(item.outputDir))}</div>`
+  const routeLine = item.outputDir && item.status !== "completed"
+    ? `<div class="queue-item-route" title="${escapeHtml(item.outputDir)}">Going to ${escapeHtml(shortPath(item.outputDir, 96))}</div>`
     : "";
   const errorLine =
     item.errorMessage && (item.status === "failed" || item.status === "cancelled")
-      ? `<div class="queue-item-error">${escapeHtml(item.errorMessage)}</div>`
+      ? `<div class="queue-item-error">${escapeHtml(prettifyErrorMessage(item.errorMessage))}</div>`
       : "";
+  const messageLine = friendlyMessage
+    ? `<p class="queue-item-message">${escapeHtml(friendlyMessage)}</p>`
+    : "";
 
   return `
     <article class="queue-item">
@@ -396,7 +560,7 @@ function renderQueueItem(item) {
         </div>
         <p class="queue-item-metrics">${escapeHtml(metricsText)}</p>
       </div>
-      <p class="queue-item-message">${escapeHtml(item.latestMessage || "")}</p>
+      ${messageLine}
       ${routeLine}
       ${outputLine}
       ${errorLine}
@@ -616,7 +780,7 @@ async function loadInitialSettings() {
 
   const settings = await window.appApi.getSettings();
   renderSettings(settings);
-  setSettingsFeedback("Downloads route only to the approved folders saved here.", "neutral");
+  setSettingsFeedback("Set these once and new downloads will keep using them.", "neutral");
 }
 
 async function recheckDependencies() {
@@ -742,5 +906,5 @@ window.addEventListener("DOMContentLoaded", () => {
   loadInitialSettings().catch((error) => {
     setSettingsFeedback(`Settings failed to load: ${error.message}`, "error");
   });
-  setUpdateFeedback("yt-dlp updates require explicit confirmation.", "neutral");
+  setUpdateFeedback("Updates stay manual and local to this machine.", "neutral");
 });

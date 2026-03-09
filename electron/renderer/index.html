@@ -21,29 +21,42 @@
             <span></span>
             <span></span>
           </div>
-          <div>
-            <h1>yt-dl</h1>
-            <p>Local-first YouTube downloader (Step 5: Security, Update, and UX Polish).</p>
+          <div class="brand-copy">
+            <p class="section-eyebrow">Desktop downloader</p>
+            <h1>Save the good part, skip the clutter.</h1>
+            <p class="brand-summary">
+              Pull down a single video, a playlist, or an audio track without leaving your machine.
+            </p>
           </div>
         </div>
-        <div class="header-chip">Single-window / local-only</div>
+        <div class="header-chip-group">
+          <div class="header-chip">Local only</div>
+          <div class="header-chip">Video + audio</div>
+          <div class="header-chip">Playlist ready</div>
+        </div>
       </header>
 
       <section class="top-stage">
         <div class="top-primary">
-          <section class="panel control-panel">
+          <section class="panel control-panel composer-panel">
             <div class="panel-title-row">
-              <h2>Input Engine</h2>
-              <span class="panel-pill">Validated in main</span>
+              <div>
+                <p class="section-eyebrow">New download</p>
+                <h2>What do you want to save?</h2>
+              </div>
+              <span class="panel-pill">Paste a link to begin</span>
             </div>
+            <p class="panel-intro">
+              Use a video link, a YouTube Music link, or a playlist. Audio can be trimmed before it lands on disk.
+            </p>
 
             <div class="form-grid">
               <label class="form-label form-label-wide" for="url-input">
-                YouTube URL
+                Link
                 <input
                   id="url-input"
                   type="url"
-                  placeholder="https://www.youtube.com/watch?v=..."
+                  placeholder="Paste a YouTube or playlist URL"
                   autocomplete="off"
                 />
               </label>
@@ -87,20 +100,28 @@
               </label>
             </div>
 
-            <p class="form-help">Leave trim blank for a full download. Supported formats: <code>MM:SS</code> and <code>HH:MM:SS</code>.</p>
+            <p class="form-help">
+              Want a clip instead of the whole thing? Leave trim blank for the full file, or use
+              <code>MM:SS</code> / <code>HH:MM:SS</code>.
+            </p>
 
             <div class="action-row">
-              <button id="validate-btn" type="button">Validate Input</button>
-              <button id="download-btn" type="button" class="button-accent">Add To Queue</button>
+              <button id="validate-btn" type="button">Check Link</button>
+              <button id="download-btn" type="button" class="button-accent">Add to Queue</button>
             </div>
 
-            <p id="input-feedback" class="feedback">Fill the fields above and add media to the queue.</p>
+            <p id="input-feedback" class="feedback">
+              Paste a link, choose your format, and add it to the queue when it looks right.
+            </p>
 
             <div class="progress-panel active-panel">
               <div class="panel-title-row panel-title-row-compact">
                 <div>
+                  <p class="section-eyebrow">Now downloading</p>
                   <h3 id="active-download-title">No active download</h3>
-                  <p id="active-download-subtitle" class="panel-subtitle">Queue is idle. Add a URL or playlist to begin.</p>
+                  <p id="active-download-subtitle" class="panel-subtitle">
+                    Queue is quiet. Add a link whenever you are ready.
+                  </p>
                 </div>
               </div>
               <progress id="download-progress" max="100" value="0"></progress>
@@ -112,13 +133,19 @@
         <div class="top-secondary">
           <section class="panel">
             <div class="panel-title-row">
-              <h2>Output Routing</h2>
-              <span class="panel-pill">Approved folders only</span>
+              <div>
+                <p class="section-eyebrow">Where files go</p>
+                <h2>Choose your folders</h2>
+              </div>
+              <span class="panel-pill">Saved for next time</span>
             </div>
+            <p class="panel-intro">
+              Keep video and audio separate if you want. New items will follow the folders you save here.
+            </p>
 
             <div class="form-grid settings-grid">
               <label class="form-label form-label-wide" for="video-output-input">
-                Video Folder
+                Video destination
                 <div class="path-control">
                   <input id="video-output-input" type="text" readonly />
                   <button id="browse-video-btn" type="button">Browse</button>
@@ -126,7 +153,7 @@
               </label>
 
               <label class="form-label form-label-wide" for="audio-output-input">
-                Audio Folder
+                Audio destination
                 <div class="path-control">
                   <input id="audio-output-input" type="text" readonly />
                   <button id="browse-audio-btn" type="button">Browse</button>
@@ -135,12 +162,12 @@
             </div>
 
             <p class="form-help">
-              Only folders saved here are used for new queue items. Video and audio downloads route independently.
+              These saved folders are the only places the app will use for new downloads.
             </p>
 
             <div class="action-row">
-              <button id="save-settings-btn" type="button">Save Folders</button>
-              <button id="reset-settings-btn" type="button">Use Defaults</button>
+              <button id="save-settings-btn" type="button">Save folders</button>
+              <button id="reset-settings-btn" type="button">Use defaults</button>
             </div>
 
             <p id="settings-feedback" class="feedback">Loading saved output folders...</p>
@@ -148,15 +175,18 @@
 
           <section class="panel runtime-panel">
             <div class="panel-title-row">
-              <h2>Local Runtime</h2>
+              <div>
+                <p class="section-eyebrow">Machine check</p>
+                <h2>Ready to download?</h2>
+              </div>
               <div class="button-cluster">
                 <button id="update-ytdlp-btn" type="button" class="button-accent">Update yt-dlp</button>
-                <button id="recheck-btn" type="button">Recheck</button>
+                <button id="recheck-btn" type="button">Refresh</button>
               </div>
             </div>
-            <p class="runtime-note">Zero telemetry. Dependency checks and updates run only when you trigger them.</p>
-            <p id="update-feedback" class="feedback">yt-dlp updates require explicit confirmation.</p>
-            <p id="status-message">Loading dependency status...</p>
+            <p class="runtime-note">Everything here stays on your machine. Updates only run when you ask for them.</p>
+            <p id="update-feedback" class="feedback">Manual updates keep you in control.</p>
+            <p id="status-message" class="status-summary">Checking your setup...</p>
             <ul id="dependency-list" class="dependency-list"></ul>
           </section>
         </div>
@@ -164,13 +194,18 @@
 
       <section class="panel queue-panel">
         <div class="panel-title-row">
-          <h2>Queue</h2>
+          <div>
+            <p class="section-eyebrow">Activity</p>
+            <h2>Queue</h2>
+          </div>
           <div id="queue-counts" class="queue-counts"></div>
         </div>
-        <p id="queue-empty" class="queue-empty">Queue is empty.</p>
+        <p class="panel-intro queue-intro">
+          Active items stay pinned at the top so you can pause, resume, or cancel without hunting around.
+        </p>
+        <p id="queue-empty" class="queue-empty">Nothing is waiting right now.</p>
         <div id="queue-sections" class="queue-sections"></div>
       </section>
-
     </main>
 
     <script src="./app.js"></script>
