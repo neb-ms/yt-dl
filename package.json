@@ -7,12 +7,66 @@
   "scripts": {
     "start": "electron .",
     "smoke:start": "node scripts/smoke-startup.js",
+    "dist:win": "electron-builder --win nsis portable",
+    "dist:linux": "electron-builder --linux AppImage tar.gz",
+    "dist:mac": "electron-builder --mac dmg zip",
     "verify:step0": "node scripts/verify-step0.js",
     "verify:step1": "node scripts/verify-step1.js",
     "verify:step2": "node scripts/verify-step2.js",
-    "verify:step3": "node scripts/verify-step3.js"
+    "verify:step3": "node scripts/verify-step3.js",
+    "verify:step4": "node scripts/verify-step4.js",
+    "verify:step5": "node scripts/verify-step5.js",
+    "verify:step6": "node scripts/verify-step6.js"
   },
   "devDependencies": {
-    "electron": "^37.2.0"
+    "electron": "^37.2.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "local.ytdl.desktop",
+    "productName": "yt-dl",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json",
+      "README.md"
+    ],
+    "extraResources": [
+      {
+        "from": "python",
+        "to": "python",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "config",
+        "to": "config",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    }
   }
 }

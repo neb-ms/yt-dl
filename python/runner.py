@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional
 
 from yt_dlp import YoutubeDL
 from yt_dlp.utils import DownloadError
+from metadata import PrepareMetadataPP, summarize_metadata
 
 
 def emit(event: str, **payload: Any) -> None:
@@ -105,6 +106,10 @@ def build_trim_download_ranges(trim_window: Dict[str, float]):
     return _download_ranges
 
 
+def should_embed_thumbnail(format_id: str) -> bool:
+    return format_id in {"audio_mp3", "audio_m4a"}
+
+
 def build_ydl_options(
     args: argparse.Namespace,
     seen_files: set[str],
@@ -146,6 +151,7 @@ def build_ydl_options(
                 emit("status", level="error", message=clean)
 
     outtmpl = os.path.join(args.output_dir, "%(title).200B [%(id)s].%(ext)s")
+    postprocessors = []
     opts: Dict[str, Any] = {
         "outtmpl": outtmpl,
         "quiet": True,
@@ -170,30 +176,48 @@ def build_ydl_options(
     elif args.format_id in {"audio_mp3", "audio_wav", "audio_m4a"}:
         opts["format"] = build_audio_selector(args.format_id, args.quality)
         if args.format_id == "audio_mp3":
-            opts["postprocessors"] = [
+            postprocessors.append(
                 {
                     "key": "FFmpegExtractAudio",
                     "preferredcodec": "mp3",
                     "preferredquality": args.quality if args.quality != "best" else "320",
                 }
-            ]
+            )
         elif args.format_id == "audio_wav":
-            opts["postprocessors"] = [
+            postprocessors.append(
                 {
                     "key": "FFmpegExtractAudio",
                     "preferredcodec": "wav",
                 }
-            ]
+            )
         elif args.format_id == "audio_m4a":
-            opts["postprocessors"] = [
+            postprocessors.append(
                 {
                     "key": "FFmpegExtractAudio",
                     "preferredcodec": "m4a",
                     "preferredquality": args.quality if args.quality != "best" else "320",
                 }
-            ]
+            )
     else:
         raise ValueError("Unsupported format id.")
+
+    postprocessors.append(
+        {
+            "key": "FFmpegMetadata",
+            "add_metadata": True,
+            "add_chapters": False,
+            "add_infojson": False,
+        }
+    )
+
+    if should_embed_thumbnail(args.format_id):
+        opts["writethumbnail"] = True
+        postprocessors.append(
+            {
+                "key": "EmbedThumbnail",
+                "already_have_thumbnail": True,
+            }
+        )
 
     if trim_window:
         opts["download_ranges"] = build_trim_download_ranges(trim_window)
@@ -202,6 +226,7 @@ def build_ydl_options(
     if args.rate_limit_bps is not None and args.rate_limit_bps > 0:
         opts["ratelimit"] = int(args.rate_limit_bps)
 
+    opts["postprocessors"] = postprocessors
     opts["_seen_files"] = seen_files
     return opts
 
@@ -251,6 +276,11 @@ def resolve_primary_info(info: Any) -> Optional[Dict[str, Any]]:
         current = next_entry
 
     return current if isinstance(current, dict) else None
+
+
+class RunnerMetadataPP(PrepareMetadataPP):
+    def __init__(self, downloader):
+        super().__init__(downloader, status_callback=lambda message: emit("status", message=message))
 
 
 def validate_trim_against_media(args: argparse.Namespace, trim_window: Optional[Dict[str, float]]) -> None:
@@ -333,7 +363,8 @@ def main() -> int:
 
     try:
         with YoutubeDL(ydl_opts) as ydl:
-            ydl.extract_info(args.url, download=True)
+            ydl.add_post_processor(RunnerMetadataPP(ydl), when="pre_process")
+            result_info = ydl.extract_info(args.url, download=True)
     except DownloadError as error:
         emit("error", message=f"Download failed: {error}")
         return 1
@@ -342,7 +373,14 @@ def main() -> int:
         return 1
 
     output_path = find_newest_output(args.output_dir, seen_files, output_file["path"])
-    emit("complete", outputPath=output_path, message="Download completed successfully.")
+    primary_info = resolve_primary_info(result_info)
+    metadata_summary = summarize_metadata(primary_info or {})
+    emit(
+        "complete",
+        outputPath=output_path,
+        message="Download completed successfully.",
+        metadata=metadata_summary,
+    )
     return 0
 
 

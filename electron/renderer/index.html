@@ -9,83 +9,156 @@
   <body>
     <main class="app-shell">
       <header class="app-header">
-        <h1>yt-dl</h1>
-        <p>Local-first YouTube downloader (Step 3: Queue + Playlist Batch).</p>
+        <div class="app-brand">
+          <div class="brand-mark" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div>
+            <h1>yt-dl</h1>
+            <p>Local-first YouTube downloader (Step 5: Security, Update, and UX Polish).</p>
+          </div>
+        </div>
+        <div class="header-chip">Single-window / local-only</div>
       </header>
 
-      <section class="panel">
-        <div class="panel-title-row">
-          <h2>Input Engine</h2>
-        </div>
-
-        <div class="form-grid">
-          <label class="form-label form-label-wide" for="url-input">
-            YouTube URL
-            <input
-              id="url-input"
-              type="url"
-              placeholder="https://www.youtube.com/watch?v=..."
-              autocomplete="off"
-            />
-          </label>
-
-          <label class="form-label" for="format-select">
-            Format
-            <select id="format-select">
-              <option value="video_mp4">Video + Audio (MP4)</option>
-              <option value="video_mkv">Video + Audio (MKV)</option>
-              <option value="audio_mp3">Audio Only (MP3)</option>
-              <option value="audio_wav">Audio Only (WAV)</option>
-              <option value="audio_m4a">Audio Only (M4A)</option>
-            </select>
-          </label>
-
-          <label class="form-label" for="quality-select">
-            Quality
-            <select id="quality-select"></select>
-          </label>
-
-          <label class="form-label" for="trim-start-input">
-            Trim Start
-            <input
-              id="trim-start-input"
-              type="text"
-              inputmode="numeric"
-              placeholder="01:05 or 00:01:05"
-              autocomplete="off"
-            />
-          </label>
-
-          <label class="form-label" for="trim-end-input">
-            Trim End
-            <input
-              id="trim-end-input"
-              type="text"
-              inputmode="numeric"
-              placeholder="01:35 or 00:01:35"
-              autocomplete="off"
-            />
-          </label>
-        </div>
-
-        <p class="form-help">Leave trim blank for a full download. Supported formats: <code>MM:SS</code> and <code>HH:MM:SS</code>.</p>
-
-        <div class="action-row">
-          <button id="validate-btn" type="button">Validate Input</button>
-          <button id="download-btn" type="button">Add To Queue</button>
-        </div>
-
-        <p id="input-feedback" class="feedback">Fill the fields above and add media to the queue.</p>
-
-        <div class="progress-panel active-panel">
-          <div class="panel-title-row panel-title-row-compact">
-            <div>
-              <h3 id="active-download-title">No active download</h3>
-              <p id="active-download-subtitle" class="panel-subtitle">Queue is idle. Add a URL or playlist to begin.</p>
+      <section class="top-stage">
+        <div class="top-primary">
+          <section class="panel control-panel">
+            <div class="panel-title-row">
+              <h2>Input Engine</h2>
+              <span class="panel-pill">Validated in main</span>
             </div>
-          </div>
-          <progress id="download-progress" max="100" value="0"></progress>
-          <p id="download-metrics" class="download-metrics">No active download.</p>
+
+            <div class="form-grid">
+              <label class="form-label form-label-wide" for="url-input">
+                YouTube URL
+                <input
+                  id="url-input"
+                  type="url"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  autocomplete="off"
+                />
+              </label>
+
+              <label class="form-label" for="format-select">
+                Format
+                <select id="format-select">
+                  <option value="video_mp4">Video + Audio (MP4)</option>
+                  <option value="video_mkv">Video + Audio (MKV)</option>
+                  <option value="audio_mp3">Audio Only (MP3)</option>
+                  <option value="audio_wav">Audio Only (WAV)</option>
+                  <option value="audio_m4a">Audio Only (M4A)</option>
+                </select>
+              </label>
+
+              <label class="form-label" for="quality-select">
+                Quality
+                <select id="quality-select"></select>
+              </label>
+
+              <label class="form-label" for="trim-start-input">
+                Trim Start
+                <input
+                  id="trim-start-input"
+                  type="text"
+                  inputmode="numeric"
+                  placeholder="01:05 or 00:01:05"
+                  autocomplete="off"
+                />
+              </label>
+
+              <label class="form-label" for="trim-end-input">
+                Trim End
+                <input
+                  id="trim-end-input"
+                  type="text"
+                  inputmode="numeric"
+                  placeholder="01:35 or 00:01:35"
+                  autocomplete="off"
+                />
+              </label>
+            </div>
+
+            <p class="form-help">Leave trim blank for a full download. Supported formats: <code>MM:SS</code> and <code>HH:MM:SS</code>.</p>
+
+            <div class="action-row">
+              <button id="validate-btn" type="button">Validate Input</button>
+              <button id="download-btn" type="button" class="button-accent">Add To Queue</button>
+            </div>
+
+            <p id="input-feedback" class="feedback">Fill the fields above and add media to the queue.</p>
+
+            <div class="progress-panel active-panel">
+              <div class="panel-title-row panel-title-row-compact">
+                <div>
+                  <h3 id="active-download-title">No active download</h3>
+                  <p id="active-download-subtitle" class="panel-subtitle">Queue is idle. Add a URL or playlist to begin.</p>
+                </div>
+              </div>
+              <progress id="download-progress" max="100" value="0"></progress>
+              <p id="download-metrics" class="download-metrics">No active download.</p>
+            </div>
+          </section>
+        </div>
+
+        <div class="top-secondary">
+          <section class="panel">
+            <div class="panel-title-row">
+              <h2>Output Routing</h2>
+              <span class="panel-pill">Approved folders only</span>
+            </div>
+
+            <div class="form-grid settings-grid">
+              <label class="form-label form-label-wide" for="video-output-input">
+                Video Folder
+                <div class="path-control">
+                  <input id="video-output-input" type="text" readonly />
+                  <button id="browse-video-btn" type="button">Browse</button>
+                </div>
+              </label>
+
+              <label class="form-label form-label-wide" for="audio-output-input">
+                Audio Folder
+                <div class="path-control">
+                  <input id="audio-output-input" type="text" readonly />
+                  <button id="browse-audio-btn" type="button">Browse</button>
+                </div>
+              </label>
+            </div>
+
+            <p class="form-help">
+              Only folders saved here are used for new queue items. Video and audio downloads route independently.
+            </p>
+
+            <div class="action-row">
+              <button id="save-settings-btn" type="button">Save Folders</button>
+              <button id="reset-settings-btn" type="button">Use Defaults</button>
+            </div>
+
+            <p id="settings-feedback" class="feedback">Loading saved output folders...</p>
+          </section>
+
+          <section class="panel runtime-panel">
+            <div class="panel-title-row">
+              <h2>Local Runtime</h2>
+              <div class="button-cluster">
+                <button id="update-ytdlp-btn" type="button" class="button-accent">Update yt-dlp</button>
+                <button id="recheck-btn" type="button">Recheck</button>
+              </div>
+            </div>
+            <p class="runtime-note">Zero telemetry. Dependency checks and updates run only when you trigger them.</p>
+            <p id="update-feedback" class="feedback">yt-dlp updates require explicit confirmation.</p>
+            <p id="status-message">Loading dependency status...</p>
+            <ul id="dependency-list" class="dependency-list"></ul>
+          </section>
         </div>
       </section>
 
@@ -98,14 +171,6 @@
         <div id="queue-sections" class="queue-sections"></div>
       </section>
 
-      <section class="panel">
-        <div class="panel-title-row">
-          <h2>Dependencies</h2>
-          <button id="recheck-btn" type="button">Recheck</button>
-        </div>
-        <p id="status-message">Loading dependency status...</p>
-        <ul id="dependency-list" class="dependency-list"></ul>
-      </section>
     </main>
 
     <script src="./app.js"></script>

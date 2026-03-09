@@ -1,0 +1,6 @@
+{
+  "outputDirectories": {
+    "videoSubdirectory": "yt-dl-videos",
+    "audioSubdirectory": "yt-dl-audio"
+  }
+}

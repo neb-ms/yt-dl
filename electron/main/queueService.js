@@ -3,7 +3,6 @@ const path = require("path");
 const { EventEmitter } = require("events");
 const { spawn } = require("child_process");
 const { findPythonExecutable } = require("./dependencyService");
-const { FORMAT_OPTIONS } = require("./validators");
 const { probeDownloadInput } = require("./probeService");
 
 const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
@@ -16,9 +15,8 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function getDefaultOutputDir(downloadsRoot, formatId) {
-  const format = FORMAT_OPTIONS[formatId];
-  const subdir = format && format.type === "video" ? "yt-dl-videos" : "yt-dl-audio";
+function getDefaultOutputDir(downloadsRoot, formatType) {
+  const subdir = formatType === "video" ? "yt-dl-videos" : "yt-dl-audio";
   return path.join(downloadsRoot, subdir);
 }
 
@@ -71,9 +69,7 @@ function normalizeSourceKind(sourceKind) {
   return sourceKind === "playlist" ? "video" : sourceKind;
 }
 
-function createQueueItem({ downloadsRoot, input, entry, runnerOptions }) {
-  const outputDir = getDefaultOutputDir(downloadsRoot, input.formatId);
-
+function createQueueItem({ input, entry, outputDir, runnerOptions }) {
   return {
     id: makeQueueItemId(),
     title: entry.title || entry.url,
@@ -143,11 +139,30 @@ function buildCounts(items) {
   );
 }
 
-function createQueueService({ appRoot, downloadsRoot, onQueueUpdated }) {
+function createQueueService({ appRoot, downloadsRoot, resolveOutputDirectory, onQueueUpdated }) {
   const emitter = new EventEmitter();
   const queueItems = [];
   let activeTask = null;
   let launchInProgress = false;
+
+  function getResolvedOutputDirectory(formatType) {
+    if (typeof resolveOutputDirectory === "function") {
+      return resolveOutputDirectory(formatType);
+    }
+
+    if (typeof downloadsRoot === "string" && downloadsRoot.trim()) {
+      return {
+        ok: true,
+        kind: formatType === "video" ? "video" : "audio",
+        path: getDefaultOutputDir(downloadsRoot, formatType)
+      };
+    }
+
+    return {
+      ok: false,
+      message: "Output routing is not configured."
+    };
+  }
 
   function getItem(itemId) {
     return queueItems.find((item) => item.id === itemId) || null;
@@ -414,6 +429,14 @@ function createQueueService({ appRoot, downloadsRoot, onQueueUpdated }) {
   async function enqueueInput(input, options = {}) {
     let itemsToAdd;
     let playlistTitle = null;
+    const resolvedOutputDir = getResolvedOutputDirectory(input.formatType);
+
+    if (!resolvedOutputDir.ok) {
+      return {
+        ok: false,
+        message: resolvedOutputDir.message
+      };
+    }
 
     if (input.sourceKind === "playlist") {
       const probeResult = await probeDownloadInput({ appRoot, input });
@@ -427,12 +450,12 @@ function createQueueService({ appRoot, downloadsRoot, onQueueUpdated }) {
       playlistTitle = probeResult.title || null;
       itemsToAdd = (probeResult.entries || []).map((entry) =>
         createQueueItem({
-          downloadsRoot,
           input,
           entry: {
             ...entry,
             playlistTitle
           },
+          outputDir: resolvedOutputDir.path,
           runnerOptions: options.runnerOptions
         })
       );
@@ -446,13 +469,13 @@ function createQueueService({ appRoot, downloadsRoot, onQueueUpdated }) {
     } else {
       itemsToAdd = [
         createQueueItem({
-          downloadsRoot,
           input,
           entry: {
             title: input.url,
             url: input.url,
             sourceKind: input.sourceKind
           },
+          outputDir: resolvedOutputDir.path,
           runnerOptions: options.runnerOptions
         })
       ];

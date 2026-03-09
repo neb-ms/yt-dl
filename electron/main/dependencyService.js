@@ -171,5 +171,6 @@ async function runDependencyCheck({ appRoot, extraEnv = {} }) {
 
 module.exports = {
   findPythonExecutable,
+  runProcess,
   runDependencyCheck
 };

@@ -114,9 +114,10 @@ let latestQueueSnapshot = {
     cancelled: 0
   }
 };
+let latestSettings = null;
 
-function setFeedback(message, type = "neutral") {
-  const feedbackEl = byId("input-feedback");
+function setInlineFeedback(elementId, message, type = "neutral") {
+  const feedbackEl = byId(elementId);
   feedbackEl.textContent = message;
   feedbackEl.classList.remove("feedback-ok", "feedback-error", "feedback-warn");
 
@@ -127,6 +128,18 @@ function setFeedback(message, type = "neutral") {
   } else if (type === "warn") {
     feedbackEl.classList.add("feedback-warn");
   }
+}
+
+function setFeedback(message, type = "neutral") {
+  setInlineFeedback("input-feedback", message, type);
+}
+
+function setSettingsFeedback(message, type = "neutral") {
+  setInlineFeedback("settings-feedback", message, type);
+}
+
+function setUpdateFeedback(message, type = "neutral") {
+  setInlineFeedback("update-feedback", message, type);
 }
 
 function setDownloadMetrics(message) {
@@ -162,6 +175,15 @@ function collectInputPayload() {
 
 function formatTrimLabel(trim) {
   return trim ? `${trim.startInput} -> ${trim.endInput}` : "Full download";
+}
+
+function shortPath(value, maxLength = 88) {
+  if (typeof value !== "string" || value.length <= maxLength) {
+    return value;
+  }
+
+  const trailingLength = 28;
+  return `${value.slice(0, maxLength - trailingLength - 3)}...${value.slice(-trailingLength)}`;
 }
 
 async function validateInput(showSuccessMessage = true) {
@@ -279,7 +301,8 @@ function renderActiveDownload(snapshot) {
   titleEl.textContent = activeItem.title || activeItem.url;
   subtitleEl.textContent =
     `${FORMAT_LABELS[activeItem.formatId] || activeItem.formatId} | ` +
-    `Quality: ${activeItem.quality} | Trim: ${formatTrimLabel(activeItem.trim)}`;
+    `Quality: ${activeItem.quality} | Trim: ${formatTrimLabel(activeItem.trim)} | ` +
+    `Folder: ${shortPath(activeItem.outputDir || "n/a")}`;
   updateProgress(percent);
   setDownloadMetrics(
     `Progress: ${percent.toFixed(1)}% | Speed: ${humanSpeed(activeItem.progress.speedBps)} | ` +
@@ -350,6 +373,9 @@ function renderQueueItem(item) {
     item.outputPath && item.status === "completed"
       ? `<div class="queue-item-path">Saved to: ${escapeHtml(item.outputPath)}</div>`
       : "";
+  const routeLine = item.outputDir
+    ? `<div class="queue-item-route">Route: ${escapeHtml(shortPath(item.outputDir))}</div>`
+    : "";
   const errorLine =
     item.errorMessage && (item.status === "failed" || item.status === "cancelled")
       ? `<div class="queue-item-error">${escapeHtml(item.errorMessage)}</div>`
@@ -371,6 +397,7 @@ function renderQueueItem(item) {
         <p class="queue-item-metrics">${escapeHtml(metricsText)}</p>
       </div>
       <p class="queue-item-message">${escapeHtml(item.latestMessage || "")}</p>
+      ${routeLine}
       ${outputLine}
       ${errorLine}
       ${controls}
@@ -431,6 +458,75 @@ function setQueueSnapshot(snapshot) {
   renderQueueCounts(latestQueueSnapshot);
   renderActiveDownload(latestQueueSnapshot);
   renderQueue(latestQueueSnapshot);
+}
+
+function renderSettings(settings) {
+  latestSettings = settings || latestSettings;
+
+  if (!latestSettings) {
+    return;
+  }
+
+  byId("video-output-input").value = latestSettings.outputDirectories?.video || "";
+  byId("audio-output-input").value = latestSettings.outputDirectories?.audio || "";
+}
+
+function collectSettingsPayload() {
+  return {
+    videoOutputDir: byId("video-output-input").value,
+    audioOutputDir: byId("audio-output-input").value
+  };
+}
+
+async function browseForDirectory(kind) {
+  const inputId = kind === "audio" ? "audio-output-input" : "video-output-input";
+  const result = await window.appApi.pickDirectory({
+    kind,
+    currentPath: byId(inputId).value
+  });
+
+  if (!result.ok) {
+    return;
+  }
+
+  byId(inputId).value = result.path;
+  setSettingsFeedback(
+    `${kind === "audio" ? "Audio" : "Video"} folder selected. Save folders to apply new routing.`,
+    "warn"
+  );
+}
+
+async function saveSettings() {
+  const saveButton = byId("save-settings-btn");
+  saveButton.disabled = true;
+  saveButton.textContent = "Saving...";
+
+  try {
+    const result = await window.appApi.saveSettings(collectSettingsPayload());
+    if (!result.ok) {
+      setSettingsFeedback(result.message || "Settings could not be saved.", "error");
+      return;
+    }
+
+    renderSettings(result.settings);
+    setSettingsFeedback("Output folders saved. New queue items will route to these approved paths.", "ok");
+  } catch (error) {
+    setSettingsFeedback(`Settings save failed: ${error.message}`, "error");
+  } finally {
+    saveButton.disabled = false;
+    saveButton.textContent = "Save Folders";
+  }
+}
+
+async function resetSettings() {
+  const result = await window.appApi.resetSettings();
+  if (!result.ok) {
+    setSettingsFeedback(result.message || "Settings could not be reset.", "error");
+    return;
+  }
+
+  renderSettings(result.settings);
+  setSettingsFeedback("Output folders reset to their default approved locations.", "ok");
 }
 
 async function addToQueue() {
@@ -512,6 +608,17 @@ async function loadInitialQueue() {
   setQueueSnapshot(queueState);
 }
 
+async function loadInitialSettings() {
+  if (!window.appApi) {
+    setSettingsFeedback("Desktop bridge is unavailable in this renderer.", "error");
+    return;
+  }
+
+  const settings = await window.appApi.getSettings();
+  renderSettings(settings);
+  setSettingsFeedback("Downloads route only to the approved folders saved here.", "neutral");
+}
+
 async function recheckDependencies() {
   const button = byId("recheck-btn");
   button.disabled = true;
@@ -529,6 +636,32 @@ async function recheckDependencies() {
   } finally {
     button.disabled = false;
     button.textContent = "Recheck";
+  }
+}
+
+async function updateYtdlp() {
+  const button = byId("update-ytdlp-btn");
+  button.disabled = true;
+  button.textContent = "Awaiting...";
+  setUpdateFeedback("Awaiting confirmation in the desktop app...", "warn");
+
+  try {
+    const result = await window.appApi.updateYtdlp();
+    if (!result.ok) {
+      if (result.cancelled) {
+        setUpdateFeedback("yt-dlp update cancelled.", "warn");
+      } else {
+        setUpdateFeedback(result.message || "yt-dlp update failed.", "error");
+      }
+      return;
+    }
+
+    setUpdateFeedback("yt-dlp update completed. Dependency status was refreshed.", "ok");
+  } catch (error) {
+    setUpdateFeedback(`yt-dlp update failed: ${error.message}`, "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Update yt-dlp";
   }
 }
 
@@ -558,6 +691,31 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   });
   byId("recheck-btn").addEventListener("click", recheckDependencies);
+  byId("update-ytdlp-btn").addEventListener("click", () => {
+    updateYtdlp().catch((error) => {
+      setUpdateFeedback(`yt-dlp update failed: ${error.message}`, "error");
+    });
+  });
+  byId("browse-video-btn").addEventListener("click", () => {
+    browseForDirectory("video").catch((error) => {
+      setSettingsFeedback(`Folder picker failed: ${error.message}`, "error");
+    });
+  });
+  byId("browse-audio-btn").addEventListener("click", () => {
+    browseForDirectory("audio").catch((error) => {
+      setSettingsFeedback(`Folder picker failed: ${error.message}`, "error");
+    });
+  });
+  byId("save-settings-btn").addEventListener("click", () => {
+    saveSettings().catch((error) => {
+      setSettingsFeedback(`Settings save failed: ${error.message}`, "error");
+    });
+  });
+  byId("reset-settings-btn").addEventListener("click", () => {
+    resetSettings().catch((error) => {
+      setSettingsFeedback(`Settings reset failed: ${error.message}`, "error");
+    });
+  });
 
   if (window.appApi) {
     window.appApi.onDependencyStatus((status) => {
@@ -565,6 +723,9 @@ window.addEventListener("DOMContentLoaded", () => {
     });
     window.appApi.onQueueUpdated((snapshot) => {
       setQueueSnapshot(snapshot);
+    });
+    window.appApi.onSettingsUpdated((settings) => {
+      renderSettings(settings);
     });
   }
 
@@ -578,4 +739,8 @@ window.addEventListener("DOMContentLoaded", () => {
   loadInitialQueue().catch((error) => {
     setFeedback(`Queue state failed to load: ${error.message}`, "error");
   });
+  loadInitialSettings().catch((error) => {
+    setSettingsFeedback(`Settings failed to load: ${error.message}`, "error");
+  });
+  setUpdateFeedback("yt-dlp updates require explicit confirmation.", "neutral");
 });

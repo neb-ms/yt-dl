@@ -1,15 +1,18 @@
 :root {
-  --bg: #0f1115;
-  --bg-elevated: #171b22;
-  --bg-panel: #121720;
-  --bg-panel-2: #0d1219;
-  --fg: #eef1f8;
-  --muted: #8d95a5;
-  --ok: #39d98a;
-  --warn: #ffb020;
-  --danger: #ff6b6b;
-  --accent: #59c2ff;
-  --border: #262b35;
+  --bg: #071018;
+  --bg-deep: #04090f;
+  --bg-elevated: #101c27;
+  --bg-panel: #0c141d;
+  --bg-panel-2: #0a1017;
+  --fg: #eef7ff;
+  --muted: #89a0b6;
+  --ok: #47e6a1;
+  --warn: #ffc14d;
+  --danger: #ff7272;
+  --accent: #52d2ff;
+  --accent-2: #89ffaf;
+  --border: #1e3142;
+  --shadow: rgba(0, 0, 0, 0.35);
 }
 
 * {
@@ -21,20 +24,79 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  background: radial-gradient(circle at top, #1a202a 0%, var(--bg) 50%);
+  background:
+    radial-gradient(circle at top, rgba(82, 210, 255, 0.18) 0%, transparent 30%),
+    linear-gradient(180deg, #09131c 0%, var(--bg) 40%, var(--bg-deep) 100%);
   color: var(--fg);
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Bahnschrift", "Trebuchet MS", sans-serif;
 }
 
 .app-shell {
-  max-width: 960px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: 28px 24px 40px;
+}
+
+.app-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.app-brand {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.brand-mark {
+  display: grid;
+  grid-template-columns: repeat(3, 10px);
+  grid-template-rows: repeat(3, 10px);
+  gap: 3px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(82, 210, 255, 0.12), rgba(137, 255, 175, 0.08));
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.18);
+}
+
+.brand-mark span {
+  display: block;
+  width: 10px;
+  height: 10px;
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-2) 100%);
+}
+
+.brand-mark span:nth-child(2),
+.brand-mark span:nth-child(4),
+.brand-mark span:nth-child(6),
+.brand-mark span:nth-child(8) {
+  opacity: 0.2;
+}
+
+.brand-mark span:nth-child(5) {
+  background: #ffffff;
+}
+
+.header-chip {
+  margin-top: 6px;
+  padding: 7px 12px;
+  border: 1px solid #33536e;
+  background: rgba(82, 210, 255, 0.08);
+  color: var(--muted);
+  font-family: "Cascadia Code", "Lucida Console", monospace;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .app-header h1 {
   margin: 0;
-  font-size: 1.8rem;
+  font-size: 2rem;
+  font-family: "Cascadia Code", "Lucida Console", monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .app-header p {
@@ -42,12 +104,48 @@ body {
   color: var(--muted);
 }
 
+.top-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
+  gap: 22px;
+  margin-top: 24px;
+  align-items: start;
+}
+
+.top-primary,
+.top-secondary {
+  display: grid;
+  gap: 22px;
+}
+
 .panel {
-  margin-top: 22px;
+  position: relative;
   padding: 20px;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  background: linear-gradient(180deg, #1a1f29 0%, var(--bg-elevated) 100%);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 22%),
+    linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-panel) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 18px 38px var(--shadow);
+  overflow: hidden;
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--accent) 0 18px,
+    transparent 18px 24px,
+    var(--accent-2) 24px 34px,
+    transparent 34px 40px
+  );
+  opacity: 0.8;
 }
 
 .panel-title-row {
@@ -60,6 +158,21 @@ body {
 .panel-title-row h2 {
   margin: 0;
   font-size: 1.2rem;
+  font-family: "Cascadia Code", "Lucida Console", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.panel-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  border: 1px solid #253141;
+  background: rgba(82, 210, 255, 0.08);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-family: "Cascadia Code", "Lucida Console", monospace;
 }
 
 .panel-title-row-compact {
@@ -69,6 +182,7 @@ body {
 .panel-title-row h3 {
   margin: 0;
   font-size: 1rem;
+  font-family: "Cascadia Code", "Lucida Console", monospace;
 }
 
 .panel-subtitle {
@@ -78,22 +192,35 @@ body {
 }
 
 button {
-  background: #2a313d;
+  background: linear-gradient(180deg, #213142 0%, #17222f 100%);
   color: var(--fg);
-  border: 1px solid #353e4c;
+  border: 1px solid #36536f;
   border-radius: 8px;
   padding: 8px 12px;
   font-size: 0.9rem;
+  font-family: "Cascadia Code", "Lucida Console", monospace;
   cursor: pointer;
+  box-shadow: 4px 4px 0 rgba(5, 11, 16, 0.45);
 }
 
 button:hover {
-  background: #353f4f;
+  background: linear-gradient(180deg, #2a3c4f 0%, #1a2634 100%);
 }
 
 button:disabled {
   cursor: default;
   opacity: 0.6;
+}
+
+.button-accent {
+  border-color: #3f8ec7;
+  background: linear-gradient(180deg, rgba(82, 210, 255, 0.3) 0%, rgba(82, 210, 255, 0.14) 100%);
+}
+
+.button-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .form-grid {
@@ -133,7 +260,7 @@ select {
   width: 100%;
   border: 1px solid #343d4b;
   border-radius: 8px;
-  background: #0f141c;
+  background: rgba(4, 10, 16, 0.75);
   color: var(--fg);
   padding: 9px 10px;
   font-size: 0.94rem;
@@ -150,6 +277,27 @@ select:focus {
   gap: 10px;
   flex-wrap: wrap;
   margin-top: 14px;
+}
+
+.settings-grid {
+  margin-top: 14px;
+}
+
+.path-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.path-control input[readonly] {
+  cursor: default;
+}
+
+.runtime-note {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
 }
 
 .feedback {
@@ -178,22 +326,34 @@ select:focus {
   padding: 16px;
   border: 1px solid #202632;
   border-radius: 12px;
-  background: linear-gradient(180deg, rgba(89, 194, 255, 0.08), rgba(89, 194, 255, 0.02));
+  background:
+    linear-gradient(180deg, rgba(82, 210, 255, 0.12), rgba(82, 210, 255, 0.03)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0 10px, transparent 10px 20px);
 }
 
 progress {
   width: 100%;
-  height: 14px;
+  height: 18px;
   border-radius: 999px;
   overflow: hidden;
+  border: 1px solid #203344;
+  background: transparent;
 }
 
 progress::-webkit-progress-bar {
-  background: #101720;
+  background:
+    repeating-linear-gradient(90deg, #091019 0 10px, #0d151f 10px 20px);
 }
 
 progress::-webkit-progress-value {
-  background: linear-gradient(90deg, #49b4ff 0%, #7cffb4 100%);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      var(--accent) 0 12px,
+      var(--accent) 12px 16px,
+      var(--accent-2) 16px 24px,
+      var(--accent-2) 24px 28px
+    );
 }
 
 .download-metrics {
@@ -220,7 +380,7 @@ progress::-webkit-progress-value {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 12px;
-  background: var(--bg-panel);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.06));
 }
 
 .dependency-header {
@@ -268,7 +428,8 @@ progress::-webkit-progress-value {
 }
 
 .queue-panel {
-  min-height: 220px;
+  min-height: 260px;
+  margin-top: 24px;
 }
 
 .queue-counts {
@@ -284,9 +445,10 @@ progress::-webkit-progress-value {
   padding: 6px 10px;
   border-radius: 999px;
   border: 1px solid #253141;
-  background: rgba(89, 194, 255, 0.08);
+  background: rgba(82, 210, 255, 0.08);
   font-size: 0.82rem;
   color: var(--muted);
+  font-family: "Cascadia Code", "Lucida Console", monospace;
 }
 
 .count-chip strong {
@@ -341,7 +503,9 @@ progress::-webkit-progress-value {
   padding: 14px;
   border: 1px solid #202632;
   border-radius: 12px;
-  background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-panel-2) 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 18%),
+    linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-panel-2) 100%);
 }
 
 .queue-item-top {
@@ -361,6 +525,7 @@ progress::-webkit-progress-value {
 .queue-item-metrics,
 .queue-item-message,
 .queue-item-path,
+.queue-item-route,
 .queue-item-error {
   margin: 8px 0 0;
   font-size: 0.86rem;
@@ -378,16 +543,23 @@ progress::-webkit-progress-value {
 
 .mini-progress {
   width: 100%;
-  height: 8px;
+  height: 10px;
   overflow: hidden;
   border-radius: 999px;
-  background: #101720;
+  background: repeating-linear-gradient(90deg, #091019 0 10px, #0d151f 10px 20px);
 }
 
 .mini-progress-fill {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, var(--accent) 0%, #7cffb4 100%);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      var(--accent) 0 10px,
+      var(--accent) 10px 14px,
+      var(--accent-2) 14px 20px,
+      var(--accent-2) 20px 24px
+    );
 }
 
 .queue-item-actions {
@@ -438,11 +610,19 @@ progress::-webkit-progress-value {
     padding: 24px 16px;
   }
 
+  .app-header {
+    flex-direction: column;
+  }
+
+  .top-stage {
+    grid-template-columns: 1fr;
+  }
+
   .form-grid {
     grid-template-columns: 1fr;
   }
 
-   .queue-item-top {
+  .queue-item-top {
     flex-direction: column;
   }
 

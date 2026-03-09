@@ -40,29 +40,94 @@ const FORMAT_OPTIONS = {
   }
 };
 
+const MAX_URL_LENGTH = 2048;
+const MAX_TIMECODE_LENGTH = 16;
+const MAX_QUEUE_ITEM_ID_LENGTH = 80;
+const SAFE_URL_PATTERN = /^[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]+$/;
+const SAFE_TIMECODE_PATTERN = /^(?:\d{1,3}:\d{2}|\d{1,3}:\d{2}:\d{2})$/;
+const SAFE_QUEUE_ITEM_ID_PATTERN = /^queue_[a-z0-9]+_[a-z0-9]+$/i;
+const SETTINGS_KINDS = new Set(["video", "audio"]);
+
 function normalizeTextInput(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function parseTrimTimecode(rawValue) {
+function isPlainObject(value) {
+  return Boolean(value) && Object.prototype.toString.call(value) === "[object Object]";
+}
+
+function hasUnsafeControlCharacters(value) {
+  return /[\u0000-\u001F\u007F]/.test(value);
+}
+
+function validateStringInput(rawValue, options = {}) {
+  if (typeof rawValue !== "string") {
+    return {
+      ok: false,
+      message: options.requiredMessage || `${options.label || "Value"} is required.`
+    };
+  }
+
+  if (hasUnsafeControlCharacters(rawValue)) {
+    return {
+      ok: false,
+      message: `${options.label || "Value"} contains unsupported characters.`
+    };
+  }
+
   const value = normalizeTextInput(rawValue);
-  const invalidFormatMessage = "Use MM:SS or HH:MM:SS (for example 01:05 or 00:01:05).";
+  const label = options.label || "Value";
 
   if (!value) {
     return {
       ok: false,
-      message: invalidFormatMessage
+      message: options.requiredMessage || `${label} is required.`
     };
   }
 
-  const segments = value.split(":");
-  const isNumeric = segments.every((segment) => /^\d+$/.test(segment));
-  if (!isNumeric) {
+  if (typeof options.maxLength === "number" && value.length > options.maxLength) {
     return {
       ok: false,
-      message: invalidFormatMessage
+      message: `${label} is too long.`
     };
   }
+
+  if (hasUnsafeControlCharacters(value)) {
+    return {
+      ok: false,
+      message: `${label} contains unsupported characters.`
+    };
+  }
+
+  if (options.pattern && !options.pattern.test(value)) {
+    return {
+      ok: false,
+      message: options.patternMessage || `${label} contains unsupported characters.`
+    };
+  }
+
+  return {
+    ok: true,
+    value
+  };
+}
+
+function parseTrimTimecode(rawValue) {
+  const invalidFormatMessage = "Use MM:SS or HH:MM:SS (for example 01:05 or 00:01:05).";
+  const stringValidation = validateStringInput(rawValue, {
+    label: "Trim value",
+    requiredMessage: invalidFormatMessage,
+    maxLength: MAX_TIMECODE_LENGTH,
+    pattern: SAFE_TIMECODE_PATTERN,
+    patternMessage: invalidFormatMessage
+  });
+
+  if (!stringValidation.ok) {
+    return stringValidation;
+  }
+
+  const value = stringValidation.value;
+  const segments = value.split(":");
 
   if (segments.length === 2) {
     const minutes = Number(segments[0]);
@@ -172,20 +237,22 @@ function validateTrimInput(payload) {
 }
 
 function parseYouTubeUrl(rawUrl) {
-  if (typeof rawUrl !== "string") {
+  const stringValidation = validateStringInput(rawUrl, {
+    label: "URL",
+    requiredMessage: "A YouTube URL is required.",
+    maxLength: MAX_URL_LENGTH,
+    pattern: SAFE_URL_PATTERN,
+    patternMessage: "URL contains unsupported characters."
+  });
+
+  if (!stringValidation.ok) {
     return {
       valid: false,
-      message: "A YouTube URL is required."
+      message: stringValidation.message
     };
   }
 
-  const trimmed = rawUrl.trim();
-  if (!trimmed) {
-    return {
-      valid: false,
-      message: "A YouTube URL is required."
-    };
-  }
+  const trimmed = stringValidation.value;
 
   let parsed;
   try {
@@ -201,6 +268,13 @@ function parseYouTubeUrl(rawUrl) {
     return {
       valid: false,
       message: "Only http/https URLs are allowed."
+    };
+  }
+
+  if (parsed.username || parsed.password || parsed.port) {
+    return {
+      valid: false,
+      message: "URL must not include credentials or a custom port."
     };
   }
 
@@ -247,11 +321,46 @@ function parseYouTubeUrl(rawUrl) {
   };
 }
 
+function validateQueueItemId(itemId) {
+  const validation = validateStringInput(itemId, {
+    label: "Queue item ID",
+    requiredMessage: "Queue item ID is required.",
+    maxLength: MAX_QUEUE_ITEM_ID_LENGTH,
+    pattern: SAFE_QUEUE_ITEM_ID_PATTERN,
+    patternMessage: "Queue item ID is invalid."
+  });
+
+  if (!validation.ok) {
+    return validation;
+  }
+
+  return {
+    ok: true,
+    itemId: validation.value
+  };
+}
+
+function normalizeSettingsPickerRequest(payload) {
+  const kind = typeof payload?.kind === "string" ? payload.kind.trim().toLowerCase() : "";
+  const currentPathValidation =
+    typeof payload?.currentPath === "string"
+      ? validateStringInput(payload.currentPath, {
+          label: "Folder path",
+          maxLength: MAX_URL_LENGTH
+        })
+      : null;
+
+  return {
+    kind: SETTINGS_KINDS.has(kind) ? kind : "video",
+    currentPath: currentPathValidation && currentPathValidation.ok ? currentPathValidation.value : ""
+  };
+}
+
 function validateDownloadInput(payload) {
   const errors = [];
   const fieldErrors = {};
 
-  if (!payload || typeof payload !== "object") {
+  if (!isPlainObject(payload)) {
     return {
       ok: false,
       errors: ["Download input is missing."],
@@ -316,8 +425,11 @@ function validateDownloadInput(payload) {
 
 module.exports = {
   FORMAT_OPTIONS,
+  hasUnsafeControlCharacters,
+  normalizeSettingsPickerRequest,
   parseTrimTimecode,
   parseYouTubeUrl,
+  validateQueueItemId,
   validateTrimInput,
   validateDownloadInput
 };

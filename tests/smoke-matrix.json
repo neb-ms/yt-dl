@@ -1,0 +1,149 @@
+{
+  "generatedAt": "2026-03-09",
+  "verifiedTargets": [
+    "windows-regression-suite",
+    "windows-packaging-build",
+    "windows-portable",
+    "windows-nsis"
+  ],
+  "cases": [
+    {
+      "id": "startup_smoke",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step0",
+      "notes": "Electron startup smoke passed on Windows."
+    },
+    {
+      "id": "dependency_detection",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step0",
+      "notes": "Installed and forced-missing dependency scenarios passed."
+    },
+    {
+      "id": "single_video_download",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step1",
+      "notes": "End-to-end MP4 download completed."
+    },
+    {
+      "id": "single_audio_download",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step1",
+      "notes": "End-to-end MP3 download completed."
+    },
+    {
+      "id": "invalid_url_blocking",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step1",
+      "notes": "Known invalid URLs were rejected."
+    },
+    {
+      "id": "trim_timecode_parsing",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step2",
+      "notes": "MM:SS and HH:MM:SS parsing checks passed."
+    },
+    {
+      "id": "trimmed_audio_video_outputs",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step2",
+      "notes": "Trimmed audio and video outputs matched expected segment duration."
+    },
+    {
+      "id": "invalid_trim_ranges",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step2",
+      "notes": "Malformed and invalid trim ranges were blocked."
+    },
+    {
+      "id": "playlist_queue_processing",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step3",
+      "notes": "Playlist expansion and queue progression passed."
+    },
+    {
+      "id": "pause_resume_cancel",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step3",
+      "notes": "Pause, resume, and cancel controls passed on an active download."
+    },
+    {
+      "id": "queue_failure_recovery",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step3",
+      "notes": "Queue state transitions remained healthy after verification flows."
+    },
+    {
+      "id": "metadata_embedding",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step4",
+      "notes": "Embedded title, artist, year, and cover art were verified on MP3 output."
+    },
+    {
+      "id": "missing_metadata_fallback",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step4",
+      "notes": "Fallback metadata derivation for uploader and upload date passed."
+    },
+    {
+      "id": "output_routing_validation",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step4",
+      "notes": "Approved custom audio/video paths routed correctly and unapproved paths were rejected."
+    },
+    {
+      "id": "security_input_fuzz",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step5",
+      "notes": "Unsafe URL, timecode, queue-id, and settings-picker payloads were rejected."
+    },
+    {
+      "id": "manual_ytdlp_update_flow",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step5",
+      "notes": "Explicit confirmation, safe argument passing, and duplicate-update blocking passed."
+    },
+    {
+      "id": "ui_layout_smoke",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step5",
+      "notes": "Renderer retained the single-window top-stage and bottom-queue layout."
+    },
+    {
+      "id": "windows_portable_packaged_startup",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step6",
+      "notes": "Portable packaged executable launched and exited cleanly with SMOKE_TEST=1."
+    },
+    {
+      "id": "windows_nsis_install_and_startup",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step6",
+      "notes": "NSIS installer completed silently to a temp directory and the installed app launched cleanly with SMOKE_TEST=1."
+    },
+    {
+      "id": "windows_packaged_resources",
+      "status": "pass",
+      "evidence": "npm.cmd run verify:step6",
+      "notes": "win-unpacked/resources contained the bundled python and config directories required by the packaged app."
+    },
+    {
+      "id": "private_or_removed_video",
+      "status": "not_run",
+      "evidence": "manual QA not performed in Step 6",
+      "notes": "No stable removed/private URL fixture was exercised in this environment."
+    },
+    {
+      "id": "network_drop_resume",
+      "status": "not_run",
+      "evidence": "manual QA not performed in Step 6",
+      "notes": "Network interruption and resume behavior were not simulated locally."
+    },
+    {
+      "id": "long_playlist_responsiveness",
+      "status": "not_run",
+      "evidence": "manual QA not performed in Step 6",
+      "notes": "Very long playlist stress testing was not run in this environment."
+    }
+  ]
+}
